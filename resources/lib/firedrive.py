@@ -1,0 +1,347 @@
+'''
+    firedrive XBMC Plugin
+    Copyright (C) 2013 dmdsoftware
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+'''
+
+import os
+import re
+import urllib, urllib2
+
+
+import xbmc, xbmcaddon, xbmcgui, xbmcplugin
+
+# global variables
+addon = xbmcaddon.Addon(id='plugin.video.firedrive')
+
+# helper methods
+def log(msg, err=False):
+    if err:
+        xbmc.log(addon.getAddonInfo('name') + ': ' + msg, xbmc.LOGERROR)
+    else:
+        xbmc.log(addon.getAddonInfo('name') + ': ' + msg, xbmc.LOGDEBUG)
+
+
+#
+# Google Docs API 3 implentation of Google Drive
+#
+class firedrive:
+
+
+    API_VERSION = '3.0'
+    ##
+    # initialize (setting 1) username, 2) password, 3) authorization token, 4) user agent string
+    ##
+    def __init__(self, user, password, auth, cookie, user_agent):
+        self.user = user
+        self.password = password
+        self.auth = auth
+        self.cookie = cookie
+        self.user_agent = user_agent
+
+        # if we have an authorization token set, try to use it
+        if auth != '':
+          log('using token')
+
+          return
+        else:
+          log('no token - logging in')
+          self.login();
+          return
+
+
+    ##
+    # perform login
+    ##
+    def login(self):
+
+#        header = { 'User-Agent' : self.user_agent, 'Cookie' : 'auth=NDI3MTg2MiswM2Y5YjEzMzI4YzU1ZWU4MDQ4NDUwMDM1YTE2OGE5Mw%3D%3D; exp=1' }
+        header = { 'User-Agent' : self.user_agent}
+
+#        url = 'http://www.firedrive.com/myfiles'
+
+#        req = urllib2.Request(url, None, header)
+
+        # if action fails, validate login
+#        try:
+#            response = urllib2.urlopen(req)
+#        except urllib2.URLError, e:
+#            log(str(e), True)
+#            return
+
+        url = 'http://auth.firedrive.com/'
+
+        values = {
+                  'pass' : self.password,
+                  'user' : self.user,
+                  'remember' : 1,
+                  'json' : 1,
+                  'user_token' : '',
+        }
+
+        log('logging in')
+
+        req = urllib2.Request(url, urllib.urlencode(values), header)
+
+        # try login
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, e:
+            if e.code == 403:
+                #login denied
+                xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30017))
+            log(str(e), True)
+            return
+        response_header = response.info().getheader('Set-Cookie')
+        response_data = response.read()
+
+#        for s in response_header.headers() :
+#            print s
+        authCookie = 0
+        for r in re.finditer(' (auth)\=([^\;]+)\;',
+                             response_header, re.DOTALL):
+            setCookie,authCookie = r.groups()
+
+        if (authCookie != 0):
+            self.cookie = authCookie
+            header = { 'User-Agent' : self.user_agent, 'Cookie' : 'auth='+self.cookie+'; exp=1' }
+
+
+        statusResult = 0
+        #validate successful login
+        for r in re.finditer('"(status)":(\d+),',
+                             response_data, re.DOTALL):
+            statusType,statusResult = r.groups()
+
+        if (statusResult == 0):
+            xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30017))
+            log('login failed', True)
+            return
+
+        url = 'http://www.firedrive.com/myfiles'
+
+        req = urllib2.Request(url, None, header)
+
+        # if action fails, validate login
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, e:
+            log(str(e), True)
+            return
+
+        response_data = response.read()
+
+        userID = 0
+        # retrieve authorization token
+        for r in re.finditer('var_Array\[\'(user_token)\'\]\s+\=\s+\"([^\"]+)\"\;',
+                             response_data, re.DOTALL):
+            id,userID = r.groups()
+
+        if userID == 0 :
+            xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30017))
+            log('login failed', True)
+            return
+
+        log('parameters: %s %s' % (id, userID))
+
+        # save authorization token
+        self.auth = userID
+        return
+
+
+    ##
+    # return the appropriate "headers" for Google Drive requests that include 1) user agent, 2) authorization token, 3) api version
+    #   returns: list containing the header
+    ##
+    def getHeadersList(self):
+        if (self.cookie != '' or self.cookie != 0):
+            return { 'User-Agent' : self.user_agent, 'Cookie' : 'auth='+self.cookie+'; exp=1' }
+        else:
+            return { 'User-Agent' : self.user_agent }
+
+    ##
+    # return the appropriate "headers" for Google Drive requests that include 1) user agent, 2) authorization token, 3) api version
+    #   returns: URL-encoded header string
+    ##
+    def getHeadersEncoded(self):
+        return urllib.urlencode(self.getHeadersList())
+
+    ##
+    # retrieve a list of videos, using playback type stream
+    #   parameters: prompt for video quality (optional), cache type (optional)
+    #   returns: list of videos
+    ##
+    def getVideosList(self, cacheType=0):
+
+        # retrieve all documents
+        url = 'http://www.firedrive.com/action/?getFiles=0&format=large&term=&group=0&limit=1&user_token='+self.auth+'&_=1394486592318'
+
+        videos = {}
+        if True:
+            log('url = %s header = %s' % (url, self.getHeadersList()))
+            req = urllib2.Request(url, None, self.getHeadersList())
+
+            # if action fails, validate login
+            try:
+              response = urllib2.urlopen(req)
+            except urllib2.URLError, e:
+              if e.code == 403 or e.code == 401:
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+              else:
+                log(str(e), True)
+                return
+
+            response_data = response.read()
+
+            # parsing page for videos
+            # video-entry
+            for r in re.finditer('"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
+                filename,title,fileID = r.groups()
+
+                log('found video %s %s' % (title, filename))
+
+                # streaming
+                videos[title] = 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID
+
+            response.close()
+
+        return videos
+
+
+
+
+    ##
+    # retrieve a video link
+    #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
+    #   returns: list of URLs for the video or single URL of video (if not prompting for quality)
+    ##
+    def getVideoLink(self,filename,cacheType=0):
+
+
+        # search by video title
+        params = urllib.urlencode({'file_id': filename, 'group_id': 0, 'page': 1, 'total':7, 'index':0, 'all':'false','user_token': self.auth, '_': 1394486104901})
+        url = 'http://www.firedrive.com/view_media/?'+params
+
+
+        log('url = %s header = %s' % (url, self.getHeadersList()))
+        req = urllib2.Request(url, None, self.getHeadersList())
+
+
+        # if action fails, validate login
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, e:
+            if e.code == 403 or e.code == 401:
+              self.login()
+              req = urllib2.Request(url, None, self.getHeadersList())
+              try:
+                response = urllib2.urlopen(req)
+              except urllib2.URLError, e:
+                log(str(e), True)
+                return
+            else:
+              log(str(e), True)
+              return
+
+        response_data = response.read()
+
+        playbackURL = 0
+        # fetch video title, download URL and docid for stream link
+        for r in re.finditer('\{\"id"\:\"([^\"]+)\"\,\"title\"\:\"([^\"]+)\"\,.*?\"down\"\:\"([^\"]+)\"[^\}]+\}' ,response_data, re.DOTALL):
+             fileID,fileTitle,fileURL = r.groups()
+             if fileID == filename:
+                 log('found video %s %s %s' % (fileID, fileURL, fileTitle))
+                 fileURL = re.sub('\\\\', '', fileURL)
+                 playbackURL = fileURL
+
+
+        response.close()
+
+        return playbackURL
+
+        if cacheType == 0:
+          return url
+        else:
+          return self.getVideoStream(docid)
+
+
+
+    ##
+    # retrieve a stream link
+    #   parameters: docid of video, whether to prompt for quality/format (optional)
+    #   returns: list of streams for the video or single stream of video (if not prompting for quality)
+    ##
+    def getVideoStream(self,docid):
+        log('fetching player link')
+
+
+        # player using docid
+        params = urllib.urlencode({'docid': docid})
+        url = 'https://docs.google.com/get_video_info?docid=' + str((docid))
+
+
+        log('url = %s header = %s' % (url, self.getHeadersList()))
+        req = urllib2.Request(url, None, self.getHeadersList())
+
+
+        # if action fails, validate login
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, e:
+            if e.code == 403 or e.code == 401:
+              self.login()
+              req = urllib2.Request(url, None, self.getHeadersList())
+              try:
+                response = urllib2.urlopen(req)
+              except urllib2.URLError, e:
+                log(str(e), True)
+                return
+            else:
+              log(str(e), True)
+              return
+
+        response_data = response.read()
+
+        # decode resulting player URL (URL is composed of many sub-URLs)
+        urls = response_data
+        urls = urllib.unquote(urllib.unquote(urllib.unquote(urllib.unquote(urllib.unquote(urls)))))
+
+        # do some substitutions to make anchoring the URL easier
+        urls = re.sub('\&url\=https://', '\@', urls)
+
+
+        # fetch format type and quality for each stream
+        videos = {}
+        for r in re.finditer('\@([^\@]+)' ,urls):
+          videoURL = r.group(1)
+          for q in re.finditer('type\=video\/([^\&]+)\&quality\=(\w+)' ,
+                             videoURL, re.DOTALL):
+            (videoType,quality) = q.groups()
+            videos[videoType + ' - ' + quality] = 'https://' + videoURL
+            log('found videoURL %s' % (videoURL))
+
+        response.close()
+
+        return 'https://' + videoURL
+
+
