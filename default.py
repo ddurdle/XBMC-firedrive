@@ -179,13 +179,6 @@ elif mode == 'playvideo' or mode == 'playVideo':
     log('play url: ' + videoURL)
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
-#force memory-cache - play a video given its exact-title
-elif mode == 'memoryCacheVideo':
-    title = plugin_queries['title']
-    videoURL = firedrive.getVideoLink(title)
-    item = xbmcgui.ListItem(path=videoURL)
-    log('play url: ' + videoURL)
-    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 
 #force stream - play a video given its exact-title
@@ -206,6 +199,8 @@ elif mode == 'streamVideo':
 #clear the authorization token
 elif mode == 'clearauth':
     addon.setSetting('auth_token', '')
+    addon.setSetting('auth_cookie', '')
+
 
 
 # update the authorization token in the configuration file if we had to login for a new one during this execution run

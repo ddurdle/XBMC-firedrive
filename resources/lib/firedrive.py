@@ -37,7 +37,7 @@ def log(msg, err=False):
 
 
 #
-# Google Docs API 3 implentation of Google Drive
+#
 #
 class firedrive:
 
@@ -69,19 +69,8 @@ class firedrive:
     ##
     def login(self):
 
-#        header = { 'User-Agent' : self.user_agent, 'Cookie' : 'auth=NDI3MTg2MiswM2Y5YjEzMzI4YzU1ZWU4MDQ4NDUwMDM1YTE2OGE5Mw%3D%3D; exp=1' }
         header = { 'User-Agent' : self.user_agent}
 
-#        url = 'http://www.firedrive.com/myfiles'
-
-#        req = urllib2.Request(url, None, header)
-
-        # if action fails, validate login
-#        try:
-#            response = urllib2.urlopen(req)
-#        except urllib2.URLError, e:
-#            log(str(e), True)
-#            return
 
         url = 'http://auth.firedrive.com/'
 
@@ -109,8 +98,6 @@ class firedrive:
         response_header = response.info().getheader('Set-Cookie')
         response_data = response.read()
 
-#        for s in response_header.headers() :
-#            print s
         authCookie = 0
         for r in re.finditer(' (auth)\=([^\;]+)\;',
                              response_header, re.DOTALL):
@@ -164,7 +151,7 @@ class firedrive:
 
 
     ##
-    # return the appropriate "headers" for Google Drive requests that include 1) user agent, 2) authorization token, 3) api version
+    # return the appropriate "headers" for FireDrive requests that include 1) user agent, 2) authorization cookie
     #   returns: list containing the header
     ##
     def getHeadersList(self):
@@ -174,7 +161,7 @@ class firedrive:
             return { 'User-Agent' : self.user_agent }
 
     ##
-    # return the appropriate "headers" for Google Drive requests that include 1) user agent, 2) authorization token, 3) api version
+    # return the appropriate "headers" for FireDrive requests that include 1) user agent, 2) authorization cookie
     #   returns: URL-encoded header string
     ##
     def getHeadersEncoded(self):
@@ -286,62 +273,5 @@ class firedrive:
 
 
 
-    ##
-    # retrieve a stream link
-    #   parameters: docid of video, whether to prompt for quality/format (optional)
-    #   returns: list of streams for the video or single stream of video (if not prompting for quality)
-    ##
-    def getVideoStream(self,docid):
-        log('fetching player link')
-
-
-        # player using docid
-        params = urllib.urlencode({'docid': docid})
-        url = 'https://docs.google.com/get_video_info?docid=' + str((docid))
-
-
-        log('url = %s header = %s' % (url, self.getHeadersList()))
-        req = urllib2.Request(url, None, self.getHeadersList())
-
-
-        # if action fails, validate login
-        try:
-            response = urllib2.urlopen(req)
-        except urllib2.URLError, e:
-            if e.code == 403 or e.code == 401:
-              self.login()
-              req = urllib2.Request(url, None, self.getHeadersList())
-              try:
-                response = urllib2.urlopen(req)
-              except urllib2.URLError, e:
-                log(str(e), True)
-                return
-            else:
-              log(str(e), True)
-              return
-
-        response_data = response.read()
-
-        # decode resulting player URL (URL is composed of many sub-URLs)
-        urls = response_data
-        urls = urllib.unquote(urllib.unquote(urllib.unquote(urllib.unquote(urllib.unquote(urls)))))
-
-        # do some substitutions to make anchoring the URL easier
-        urls = re.sub('\&url\=https://', '\@', urls)
-
-
-        # fetch format type and quality for each stream
-        videos = {}
-        for r in re.finditer('\@([^\@]+)' ,urls):
-          videoURL = r.group(1)
-          for q in re.finditer('type\=video\/([^\&]+)\&quality\=(\w+)' ,
-                             videoURL, re.DOTALL):
-            (videoType,quality) = q.groups()
-            videos[videoType + ' - ' + quality] = 'https://' + videoURL
-            log('found videoURL %s' % (videoURL))
-
-        response.close()
-
-        return 'https://' + videoURL
 
 
