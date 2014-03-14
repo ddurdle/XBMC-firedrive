@@ -191,7 +191,7 @@ elif mode == 'playvideo' or mode == 'playVideo':
 
 
 #force stream - play a video given its exact-title
-elif mode == 'streamVideo':
+elif mode == 'streamVideo' or mode == 'streamvideo':
     try:
       filename = plugin_queries['filename']
     except:
@@ -203,6 +203,20 @@ elif mode == 'streamVideo':
     item = xbmcgui.ListItem(path=videoURL)
     log('play url: ' + videoURL)
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
+
+elif mode == 'streamURL' or mode == 'streamurl':
+    try:
+      url = plugin_queries['url']
+    except:
+      url = 0
+
+
+    # immediately play resulting (is a video)
+    videoURL = firedrive.getPublicLink(url)
+    item = xbmcgui.ListItem(path=videoURL)
+    log('play url: ' + videoURL)
+    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
+
 
 
 #clear the authorization token

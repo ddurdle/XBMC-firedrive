@@ -325,11 +325,82 @@ class firedrive:
 
         return playbackURL
 
-        if cacheType == 0:
-          return url
-        else:
-          return self.getVideoStream(docid)
 
+    ##
+    # retrieve a video link
+    #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
+    #   returns: list of URLs for the video or single URL of video (if not prompting for quality)
+    ##
+    def getPublicLink(self,url,cacheType=0):
+
+
+        log('url = %s header = %s' % (url, self.getHeadersList()))
+        req = urllib2.Request(url, None, self.getHeadersList())
+
+
+        # if action fails, validate login
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, e:
+            if e.code == 403 or e.code == 401:
+              self.login()
+              req = urllib2.Request(url, None, self.getHeadersList())
+              try:
+                response = urllib2.urlopen(req)
+              except urllib2.URLError, e:
+                log(str(e), True)
+                return
+            else:
+              log(str(e), True)
+              return
+
+        response_data = response.read()
+
+        confirmID = 0
+        # fetch video title, download URL and docid for stream link
+        for r in re.finditer('name\=\"(confirm)\" value\=\"([^\"]+)"\/\>' ,response_data, re.DOTALL):
+             confirmType,confirmID = r.groups()
+
+        response.close()
+
+        if confirmID == 0:
+            return
+
+        values = {
+                  'confirm' : confirmID,
+        }
+
+        req = urllib2.Request(url, urllib.urlencode(values), self.getHeadersList())
+
+
+        # if action fails, validate login
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, e:
+            if e.code == 403 or e.code == 401:
+              self.login()
+              req = urllib2.Request(url,  urllib.urlencode(values), self.getHeadersList())
+              try:
+                response = urllib2.urlopen(req)
+              except urllib2.URLError, e:
+                log(str(e), True)
+                return
+            else:
+              log(str(e), True)
+              return
+
+        response_data = response.read()
+
+        streamURL = 0
+        # fetch video title, download URL and docid for stream link
+        for r in re.finditer('(file)\: \'([^\']+)' ,response_data, re.DOTALL):
+             streamType,streamURL = r.groups()
+
+
+        response.close()
+
+
+        return streamURL
 
 
 
