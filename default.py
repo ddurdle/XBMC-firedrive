@@ -162,9 +162,9 @@ if mode == 'main' or mode == 'folder':
 
     videos = firedrive.getVideosList(folderID)
     for title in sorted(videos.iterkeys()):
-      addVideo(videos[title],
+      addVideo(videos[title]['url'],
                              { 'title' : title , 'plot' : title }, title,
-                             img='None')
+                             img=videos[title]['thumbnail'])
 
 #play a URL that is passed in (presumely requires authorizated session)
 elif mode == 'play':

@@ -204,21 +204,26 @@ class firedrive:
 
             # parsing page for videos
             # video-entry
-            for r in re.finditer('type=\'video\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
-                filename,title,fileID = r.groups()
+            for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'video\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
+                img,filename,title,fileID = r.groups()
+                img = re.sub('\\\\', '', img)
+                img = 'http://static.firedrive.com/'+img
+
 
                 log('found video %s %s' % (title, filename))
 
                 # streaming
-                videos[title] = 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID
+                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID, 'thumbnail' : img}
 
-            for r in re.finditer('type=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
-                filename,title,fileID = r.groups()
+            for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
+                img,filename,title,fileID = r.groups()
+                img = re.sub('\\\\', '', img)
+                img = 'http://static.firedrive.com/'+img
 
                 log('found audio %s %s' % (title, filename))
 
                 # streaming
-                videos[title] = 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID
+                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID, 'thumbnail' : img}
 
             response.close()
 
