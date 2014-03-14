@@ -41,7 +41,7 @@ Modes:
 4) mode=streamURL
 - playback a specific FireDrive video/audio URL (format: http://www.firedrive.com/file/#####) via stream
 - handy for playback of publicly shared videos stored in FireDrive
-- create .strm or .m3u files containing the following: plugin://plugin.video.gdrive/?mode=streamURL&amp;url=http://www.firedrive.com/file/#####
+- create .strm or .m3u files containing the following: plugin://plugin.video.firedrive/?mode=streamURL&amp;url=http://www.firedrive.com/file/#####
 - if your video is composed of multiple clips, you can create a .m3u that makes the above plugin:// call, one line for each clip.  You can then create a .strm file that points to the .m3u.  XBMC can index movies and shows contained in your Google Drive account by either a .strm containing a single plugin:// call to the video, or a .strm that points to a local .m3u file that contains a list of plugin:// calls representing the video
 
 
