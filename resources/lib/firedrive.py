@@ -172,10 +172,12 @@ class firedrive:
     #   parameters: prompt for video quality (optional), cache type (optional)
     #   returns: list of videos
     ##
-    def getVideosList(self, cacheType=0):
+    def getVideosList(self, folderID=0, cacheType=0):
 
         # retrieve all documents
-        url = 'http://www.firedrive.com/action/?getFiles=0&format=large&term=&group=0&limit=1&user_token='+self.auth+'&_=1394486592318'
+        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.auth, '_': 1394486104901})
+
+        url = 'http://www.firedrive.com/action/?'+ params
 
         videos = {}
         if True:
@@ -202,10 +204,18 @@ class firedrive:
 
             # parsing page for videos
             # video-entry
-            for r in re.finditer('"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
+            for r in re.finditer('type=\'video\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 filename,title,fileID = r.groups()
 
                 log('found video %s %s' % (title, filename))
+
+                # streaming
+                videos[title] = 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID
+
+            for r in re.finditer('type=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
+                filename,title,fileID = r.groups()
+
+                log('found audio %s %s' % (title, filename))
 
                 # streaming
                 videos[title] = 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID
@@ -214,6 +224,55 @@ class firedrive:
 
         return videos
 
+
+    ##
+    # retrieve a list of folders
+    #   parameters: folder is the current folderID
+    #   returns: list of videos
+    ##
+    def getFolderList(self, folderID=0):
+
+        # retrieve all documents
+        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.auth, '_': 1394486104901})
+
+        url = 'http://www.firedrive.com/action/?'+ params
+
+        folders = {}
+        if True:
+            log('url = %s header = %s' % (url, self.getHeadersList()))
+            req = urllib2.Request(url, None, self.getHeadersList())
+
+            # if action fails, validate login
+            try:
+              response = urllib2.urlopen(req)
+            except urllib2.URLError, e:
+              if e.code == 403 or e.code == 401:
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+              else:
+                log(str(e), True)
+                return
+
+            response_data = response.read()
+
+            # parsing page for videos
+            # video-entry
+            for r in re.finditer('"f_id":"([^\"]+)".*?"f_fullname":"([^\"]+)"' ,response_data, re.DOTALL):
+                folderID, folderName = r.groups()
+
+                log('found folder %s %s' % (folderID, folderName))
+
+                # streaming
+                folders[folderName] = 'plugin://plugin.video.firedrive?mode=folder&folderID=' + folderID
+
+            response.close()
+
+        return folders
 
 
 

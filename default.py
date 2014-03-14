@@ -142,16 +142,25 @@ log('plugin handle: ' + str(plugin_handle))
 mode = plugin_queries['mode']
 
 #dump a list of videos available to play
-if mode == 'main':
+if mode == 'main' or mode == 'folder':
     log(mode)
+
+    folderID=0
+    if (mode == 'folder'):
+        folderID = plugin_queries['folderID']
+
+
 
     cacheType = addon.getSetting('playback_type')
 
-#    if cacheType == '0':
     videos = firedrive.getVideosList()
-#    else:
-#      videos = firedrive.getVideosList(2)
 
+
+    folders = firedrive.getFolderList(folderID)
+    for title in sorted(folders.iterkeys()):
+      addDirectory(folders[title],title)
+
+    videos = firedrive.getVideosList(folderID)
     for title in sorted(videos.iterkeys()):
       addVideo(videos[title],
                              { 'title' : title , 'plot' : title }, title,
