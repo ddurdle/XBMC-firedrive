@@ -1,3 +1,5 @@
+Version 0.1.x
+- site change: fix view_media API call
 - added thumbnail support
 Version 0.0.2.x
 - support for folders [invoke w/ plugin://plugin.video.firedrive/?mode=folder&amp;folderID=unique_folder_id]

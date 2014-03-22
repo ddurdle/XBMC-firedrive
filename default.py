@@ -199,7 +199,7 @@ elif mode == 'streamVideo' or mode == 'streamvideo':
 
 
     # immediately play resulting (is a video)
-    videoURL = firedrive.getVideoLink(filename, 2)
+    videoURL = firedrive.getVideoLink(filename)
     item = xbmcgui.ListItem(path=videoURL)
     log('play url: ' + videoURL)
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)

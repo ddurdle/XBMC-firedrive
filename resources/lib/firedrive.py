@@ -289,6 +289,17 @@ class firedrive:
     def getVideoLink(self,filename,cacheType=0):
 
 
+
+        return 'http://dl.firedrive.com/?alias='+filename+'&stream' + '|'+self.getHeadersEncoded()
+
+    ##
+    # retrieve a video link
+    #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
+    #   returns: list of URLs for the video or single URL of video (if not prompting for quality)
+    ##
+    def getVideoLinkDNU(self,filename,cacheType=0):
+
+
         # search by video title
         params = urllib.urlencode({'file_id': filename, 'group_id': 0, 'page': 1, 'total':7, 'index':0, 'all':'false','user_token': self.auth, '_': 1394486104901})
         url = 'http://www.firedrive.com/view_media/?'+params
@@ -329,8 +340,6 @@ class firedrive:
         response.close()
 
         return playbackURL
-
-
     ##
     # retrieve a video link
     #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
