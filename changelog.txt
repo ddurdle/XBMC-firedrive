@@ -1,3 +1,4 @@
+- save_auth_token should be true (speed up; automatic login)
 Version 0.1.x
 - site change: fix view_media API call
 - added thumbnail support
