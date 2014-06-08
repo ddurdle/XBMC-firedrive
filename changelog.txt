@@ -1,9 +1,15 @@
+Version 0.2
+- display title when playback of video title directly
+- playback in HD, if HD stream available
+- fix for public URLs that belong to signed in user; don't need to press "continue to file" button (automatically detect this condition)
+- fix playback for audio streams
+- add parameter to force SD playback (ignore HD)
 - save_auth_token should be true (speed up; automatic login)
-Version 0.1.x
+Version 0.1
 - site change: fix view_media API call
 - added thumbnail support
-Version 0.0.2.x
+Version 0.0.2
 - support for folders [invoke w/ plugin://plugin.video.firedrive/?mode=folder&amp;folderID=unique_folder_id]
 - support for public URLS [invoke w/ plugin://plugin.video.firedrive/?mode=streamURL&amp;url=http://www.firedrive.com/file/#####]
-Version 0.0.1.x
+Version 0.0.1
 - Initial version

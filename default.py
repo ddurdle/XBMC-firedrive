@@ -153,6 +153,7 @@ if mode == 'main' or mode == 'folder':
 
     cacheType = addon.getSetting('playback_type')
 
+
     videos = firedrive.getVideosList()
 
 
@@ -178,14 +179,26 @@ elif mode == 'play':
 elif mode == 'playvideo' or mode == 'playVideo':
     title = plugin_queries['title']
     cacheType = addon.getSetting('playback_type')
+    force_sd = addon.getSetting('force_sd')
 
-    if cacheType == '0':
-      videoURL = firedrive.getVideoLink(title)
+    if force_sd == 'true':
+        force_sd = True
     else:
-      videoURL = firedrive.getVideoLink(title,True,cacheType)
+        force_sd = False
+
+    try:
+        quality = plugin_queries['quality']
+        if (quality == 'SD'):
+            force_sd = True
+    except :
+        pass
+
+
+    videoURL = firedrive.getVideoLink(title,cacheType,force_sd)
 
     item = xbmcgui.ListItem(path=videoURL)
     log('play url: ' + videoURL)
+    item.setInfo( type="Video", infoLabels={ "Title": title , "Plot" : title } )
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 
@@ -197,12 +210,41 @@ elif mode == 'streamVideo' or mode == 'streamvideo':
     except:
       title = 0
 
+    force_sd = addon.getSetting('force_sd')
+
+    if force_sd == 'true':
+        force_sd = True
+    else:
+        force_sd = False
+
+    try:
+        quality = plugin_queries['quality']
+        if (quality == 'SD'):
+            force_sd = True
+    except :
+        pass
 
     # immediately play resulting (is a video)
-    videoURL = firedrive.getVideoLink(filename)
+    videoURL = firedrive.getVideoLink(filename, 0, force_sd)
     item = xbmcgui.ListItem(path=videoURL)
     log('play url: ' + videoURL)
+    item.setInfo( type="Video", infoLabels={ "Title": filename , "Plot" : filename } )
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
+
+#force stream - play a video given its exact-title
+elif mode == 'streamAudio' or mode == 'streamaudio':
+    try:
+      filename = plugin_queries['filename']
+    except:
+      title = 0
+
+    # immediately play resulting (is a video)
+    videoURL = firedrive.getAudioLink(filename)
+    item = xbmcgui.ListItem(path=videoURL)
+    log('play url: ' + videoURL)
+    item.setInfo( type="Video", infoLabels={ "Title": filename , "Plot" : filename } )
+    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
+
 
 elif mode == 'streamURL' or mode == 'streamurl':
     try:
@@ -215,6 +257,7 @@ elif mode == 'streamURL' or mode == 'streamurl':
     videoURL = firedrive.getPublicLink(url)
     item = xbmcgui.ListItem(path=videoURL)
     log('play url: ' + videoURL)
+    item.setInfo( type="Video", infoLabels={ "Title": url , "Plot" : url } )
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 

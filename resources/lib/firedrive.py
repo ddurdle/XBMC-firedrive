@@ -223,7 +223,7 @@ class firedrive:
                 log('found audio %s %s' % (title, filename))
 
                 # streaming
-                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID, 'thumbnail' : img}
+                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamAudio&filename=' + fileID, 'thumbnail' : img}
 
             response.close()
 
@@ -282,15 +282,63 @@ class firedrive:
 
 
     ##
+    # retrieve a audio link
+    #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
+    #   returns: list of URLs for the video or single URL of video (if not prompting for quality)
+    ##
+    def getAudioLink(self,filename):
+
+        return 'http://dl.firedrive.com/?alias='+filename+'&key' + '|'+self.getHeadersEncoded()
+
+
+
+    ##
     # retrieve a video link
     #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
     #   returns: list of URLs for the video or single URL of video (if not prompting for quality)
     ##
-    def getVideoLink(self,filename,cacheType=0):
+    def getVideoLink(self,filename,cacheType=0,videoQuality=False):
+
+        #user requested SD quality
+        if videoQuality == True:
+            return 'http://dl.firedrive.com/?alias='+filename+'&stream' + '|'+self.getHeadersEncoded()
 
 
+        url = 'http://www.firedrive.com/file/'+filename
 
-        return 'http://dl.firedrive.com/?alias='+filename+'&stream' + '|'+self.getHeadersEncoded()
+        log('url = %s header = %s' % (url, self.getHeadersList()))
+        req = urllib2.Request(url, None, self.getHeadersList())
+
+
+        # if action fails, validate login
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, e:
+            if e.code == 403 or e.code == 401:
+              self.login()
+              req = urllib2.Request(url, None, self.getHeadersList())
+              try:
+                response = urllib2.urlopen(req)
+              except urllib2.URLError, e:
+                log(str(e), True)
+                return
+            else:
+              log(str(e), True)
+              return
+
+        response_data = response.read()
+
+        playbackURL = playbackURL = 'http://dl.firedrive.com/?alias='+filename+'&stream' + '|'+self.getHeadersEncoded()
+        # fetch video title, download URL and docid for stream link
+        for r in re.finditer('(label)\: \"([^\"]+)\"' ,response_data, re.DOTALL):
+             streamLabel,streamType = r.groups()
+             if streamType == 'HD':
+                 playbackURL = 'http://dl.firedrive.com/?alias='+filename+'&hd' + '|'+self.getHeadersEncoded()
+
+        response.close()
+
+        return playbackURL
+
 
     ##
     # retrieve a video link
@@ -377,44 +425,48 @@ class firedrive:
 
         response.close()
 
-        if confirmID == 0:
-            return
+        #if we need to confirm (sometimes not necessary if logged in)
+        if confirmID != 0:
 
-        values = {
+            values = {
                   'confirm' : confirmID,
-        }
+                  }
 
-        req = urllib2.Request(url, urllib.urlencode(values), self.getHeadersList())
+            req = urllib2.Request(url, urllib.urlencode(values), self.getHeadersList())
 
 
-        # if action fails, validate login
-        try:
-            response = urllib2.urlopen(req)
-        except urllib2.URLError, e:
-            if e.code == 403 or e.code == 401:
-              self.login()
-              req = urllib2.Request(url,  urllib.urlencode(values), self.getHeadersList())
-              try:
+            # if action fails, validate login
+            try:
                 response = urllib2.urlopen(req)
-              except urllib2.URLError, e:
-                log(str(e), True)
-                return
-            else:
-              log(str(e), True)
+            except urllib2.URLError, e:
+              if e.code == 403 or e.code == 401:
+                        self.login()
+                        req = urllib2.Request(url,  urllib.urlencode(values), self.getHeadersList())
+                        try:
+                            response = urllib2.urlopen(req)
+                        except urllib2.URLError, e:
+                            log(str(e), True)
+                            return
+              else:
+                  log(str(e), True)
               return
 
-        response_data = response.read()
+            response_data = response.read()
 
         streamURL = 0
-        # fetch video title, download URL and docid for stream link
+        # fetch video title, download URL
         for r in re.finditer('(file)\: \'([^\']+)' ,response_data, re.DOTALL):
+             streamType,streamURL = r.groups()
+
+        # fetch audio title, download URL
+        for r in re.finditer('(mp3)\:\"([^\"]+)' ,response_data, re.DOTALL):
              streamType,streamURL = r.groups()
 
 
         response.close()
 
 
-        return streamURL
+        return streamURL + '|'+self.getHeadersEncoded()
 
 
 
