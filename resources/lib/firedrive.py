@@ -53,6 +53,10 @@ class firedrive:
         self.cookie = cookie
         self.user_agent = user_agent
 
+        #public playback only -- no authentication
+        if user == '':
+            return
+
         # if we have an authorization token set, try to use it
         if auth != '':
           log('using token')
@@ -202,6 +206,17 @@ class firedrive:
 
             response_data = response.read()
 
+            #if authorization cookie is broken, response will be empty, so log in again
+            if response_data == '':
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+                response_data = response.read()
+
             # parsing page for videos
             # video-entry
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'video\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
@@ -265,6 +280,17 @@ class firedrive:
 
             response_data = response.read()
 
+            #if authorization cookie is broken, response will be empty, so log in again
+            if response_data == '':
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+                response_data = response.read()
+
             # parsing page for videos
             # video-entry
             for r in re.finditer('"f_id":"([^\"]+)".*?"f_fullname":"([^\"]+)"' ,response_data, re.DOTALL):
@@ -327,6 +353,17 @@ class firedrive:
               return
 
         response_data = response.read()
+
+        #if authorization cookie is broken, response will be empty, so log in again
+        if response_data == '':
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+                response_data = response.read()
 
         playbackURL = playbackURL = 'http://dl.firedrive.com/?alias='+filename+'&stream' + '|'+self.getHeadersEncoded()
         # fetch video title, download URL and docid for stream link
@@ -418,6 +455,17 @@ class firedrive:
 
         response_data = response.read()
 
+        #if authorization cookie is broken, response will be empty, so log in again
+        if response_data == '':
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+                response_data = response.read()
+
         confirmID = 0
         # fetch video title, download URL and docid for stream link
         for r in re.finditer('name\=\"(confirm)\" value\=\"([^\"]+)"\/\>' ,response_data, re.DOTALL):
@@ -455,7 +503,7 @@ class firedrive:
 
         streamURL = 0
         # fetch video title, download URL
-        for r in re.finditer('(file)\: \'([^\']+)' ,response_data, re.DOTALL):
+        for r in re.finditer('(file)\: loadURL\(\'([^\']+)' ,response_data, re.DOTALL):
              streamType,streamURL = r.groups()
 
         # fetch audio title, download URL

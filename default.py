@@ -116,13 +116,13 @@ auth_cookie = addon.getSetting('auth_cookie')
 user_agent = addon.getSetting('user_agent')
 save_auth_token = addon.getSetting('save_auth_token')
 
+mode = plugin_queries['mode']
 
 # you need to have at least a username&password set or an authorization token
-if ((username == '' or password == '') and auth_token == ''):
+if ((not mode == 'streamURL' and not mode == 'streamurl') and ((username == '' or password == '') and auth_token == '')):
     xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
     log(addon.getLocalizedString(30015), True)
     xbmcplugin.endOfDirectory(plugin_handle)
-
 
 #let's log in
 firedrive = firedrive.firedrive(username, password, auth_token, auth_cookie, user_agent)
@@ -139,7 +139,6 @@ log('plugin url: ' + plugin_url)
 log('plugin queries: ' + str(plugin_queries))
 log('plugin handle: ' + str(plugin_handle))
 
-mode = plugin_queries['mode']
 
 #dump a list of videos available to play
 if mode == 'main' or mode == 'folder':

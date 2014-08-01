@@ -1,11 +1,15 @@
-Version 0.2
+Version 0.2.1
+- fix change on firedrive for streamURL
+- workaround server issue with broken user token
+- fix: don't prevent public url playback if no user account is specified in settings
+Version 0.2.0
 - display title when playback of video title directly
 - playback in HD, if HD stream available
 - fix for public URLs that belong to signed in user; don't need to press "continue to file" button (automatically detect this condition)
 - fix playback for audio streams
 - add parameter to force SD playback (ignore HD)
 - save_auth_token should be true (speed up; automatic login)
-Version 0.1
+Version 0.1.0
 - site change: fix view_media API call
 - added thumbnail support
 Version 0.0.2
