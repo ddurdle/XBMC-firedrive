@@ -41,6 +41,9 @@ def log(msg, err=False):
 #
 class firedrive:
 
+    CACHE_TYPE_MEMORY = 0
+    CACHE_TYPE_DISK = 1
+    CACHE_TYPE_STREAM = 2
 
     API_VERSION = '3.0'
     ##
@@ -227,8 +230,12 @@ class firedrive:
 
                 log('found video %s %s' % (title, filename))
 
-                # streaming
-                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID, 'thumbnail' : img}
+                if cacheType == self.CACHE_TYPE_STREAM:
+                  # streaming
+                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID, 'thumbnail' : img}
+                else:
+                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&filename=' + fileID, 'thumbnail' : img}
+
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
@@ -237,8 +244,17 @@ class firedrive:
 
                 log('found audio %s %s' % (title, filename))
 
-                # streaming
-                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamAudio&filename=' + fileID, 'thumbnail' : img}
+                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playAudio&filename=' + fileID, 'thumbnail' : img}
+
+            for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'other\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
+                img,filename,title,fileID = r.groups()
+                img = re.sub('\\\\', '', img)
+                img = 'http://static.firedrive.com/'+img
+
+                log('found other %s %s' % (title, filename))
+
+                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&filename=' + fileID, 'thumbnail' : img}
+
 
             response.close()
 
@@ -326,8 +342,10 @@ class firedrive:
     def getVideoLink(self,filename,cacheType=0,videoQuality=False):
 
         #user requested SD quality
-        if videoQuality == True:
+        if cacheType == self.CACHE_TYPE_STREAM and videoQuality == True:
             return 'http://dl.firedrive.com/?alias='+filename+'&stream' + '|'+self.getHeadersEncoded()
+        elif cacheType != self.CACHE_TYPE_STREAM:
+            return 'http://dl.firedrive.com/?alias='+filename+ '|'+self.getHeadersEncoded()
 
 
         url = 'http://www.firedrive.com/file/'+filename

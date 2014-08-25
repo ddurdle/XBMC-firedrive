@@ -118,8 +118,11 @@ save_auth_token = addon.getSetting('save_auth_token')
 
 mode = plugin_queries['mode']
 
+# make mode case-insensitive
+mode = mode.lower()
+
 # you need to have at least a username&password set or an authorization token
-if ((not mode == 'streamURL' and not mode == 'streamurl') and ((username == '' or password == '') and auth_token == '')):
+if ((not mode == 'streamurl') and ((username == '' or password == '') and auth_token == '')):
     xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
     log(addon.getLocalizedString(30015), True)
     xbmcplugin.endOfDirectory(plugin_handle)
@@ -149,11 +152,12 @@ if mode == 'main' or mode == 'folder':
         folderID = plugin_queries['folderID']
 
 
+    try:
+      cacheType = (int)(addon.getSetting('playback_type'))
+    except:
+      cacheType = 0
 
-    cacheType = addon.getSetting('playback_type')
-
-
-    videos = firedrive.getVideosList()
+    videos = firedrive.getVideosList(folderID,cacheType)
 
 
     folders = firedrive.getFolderList(folderID)
@@ -175,35 +179,23 @@ elif mode == 'play':
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 #play a video given its exact-title
-elif mode == 'playvideo' or mode == 'playVideo':
-    title = plugin_queries['title']
-    cacheType = addon.getSetting('playback_type')
-    force_sd = addon.getSetting('force_sd')
+elif mode == 'playvideo':
+    filename = plugin_queries['filename']
 
-    if force_sd == 'true':
-        force_sd = True
-    else:
-        force_sd = False
-
-    try:
-        quality = plugin_queries['quality']
-        if (quality == 'SD'):
-            force_sd = True
-    except :
-        pass
+    # no need to select stream type
 
 
-    videoURL = firedrive.getVideoLink(title,cacheType,force_sd)
+    videoURL = firedrive.getVideoLink(filename,0,False)
 
     item = xbmcgui.ListItem(path=videoURL)
     log('play url: ' + videoURL)
-    item.setInfo( type="Video", infoLabels={ "Title": title , "Plot" : title } )
+    item.setInfo( type="Video", infoLabels={ "Title": filename , "Plot" : filename } )
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 
 
 #force stream - play a video given its exact-title
-elif mode == 'streamVideo' or mode == 'streamvideo':
+elif mode == 'streamvideo':
     try:
       filename = plugin_queries['filename']
     except:
@@ -224,14 +216,14 @@ elif mode == 'streamVideo' or mode == 'streamvideo':
         pass
 
     # immediately play resulting (is a video)
-    videoURL = firedrive.getVideoLink(filename, 0, force_sd)
+    videoURL = firedrive.getVideoLink(filename, firedrive.CACHE_TYPE_STREAM, force_sd)
     item = xbmcgui.ListItem(path=videoURL)
     log('play url: ' + videoURL)
     item.setInfo( type="Video", infoLabels={ "Title": filename , "Plot" : filename } )
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 #force stream - play a video given its exact-title
-elif mode == 'streamAudio' or mode == 'streamaudio':
+elif mode == 'streamaudio' or mode == 'playaudio':
     try:
       filename = plugin_queries['filename']
     except:
@@ -245,7 +237,7 @@ elif mode == 'streamAudio' or mode == 'streamaudio':
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 
-elif mode == 'streamURL' or mode == 'streamurl':
+elif mode == 'streamurl':
     try:
       url = plugin_queries['url']
     except:

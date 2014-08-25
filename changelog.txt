@@ -1,3 +1,7 @@
+Version 0.2.2
+- refactor API: streamVideo, playVideo, streamAudio, playAudio (added)
+- list and play files that are not recognied as either Video or Audio (type: Other)
+- add playback type variable
 Version 0.2.1
 - fix change on firedrive for streamURL
 - workaround server issue with broken user token
