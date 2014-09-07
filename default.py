@@ -161,12 +161,14 @@ if mode == 'main' or mode == 'folder':
 
 
     folders = firedrive.getFolderList(folderID)
-    for title in sorted(folders.iterkeys()):
-      addDirectory(folders[title],title)
+    if folders:
+      for title in sorted(folders.iterkeys()):
+        addDirectory(folders[title],title)
 
     videos = firedrive.getVideosList(folderID)
-    for title in sorted(videos.iterkeys()):
-      addVideo(videos[title]['url'],
+    if videos:
+      for title in sorted(videos.iterkeys()):
+        addVideo(videos[title]['url'],
                              { 'title' : title , 'plot' : title }, title,
                              img=videos[title]['thumbnail'])
 

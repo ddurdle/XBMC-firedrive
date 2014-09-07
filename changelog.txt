@@ -1,3 +1,5 @@
+Version 0.2.3
+- fix for folder check
 Version 0.2.2
 - refactor API: streamVideo, playVideo, streamAudio, playAudio (added)
 - list and play files that are not recognied as either Video or Audio (type: Other)
