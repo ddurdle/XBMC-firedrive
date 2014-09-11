@@ -6,7 +6,7 @@ FireDrive / Putlocker Video add-on for XBMC
 A video add-on for XBMC that enables playback of videos stored in a FireDrive account.
 
 Supports [Tested on]:
-All XBMC 12, 12.2, 13 including Linux, Windows, OS X, Android, Pivos, iOS (including ATV2), Raspberry Pi
+All XBMC 12-13 including Linux, Windows, OS X, Android, Pivos, iOS (including ATV2), Raspberry Pi
 
 Thoroughly tested on XBMC for Linux v13 & Raspberry Pi Raspbmc v12
 
@@ -46,6 +46,5 @@ Modes:
 
 
 Roadmap to future releases:
-- support for multiple Google Drive accounts
 - support for pictures
 - support for caching account contents
