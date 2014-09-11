@@ -1,3 +1,6 @@
+Version 0.3.0
+- multiple account support (up to 10)
+- update to clearauth
 Version 0.2.3
 - fix for folder check
 Version 0.2.2

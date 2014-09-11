@@ -81,6 +81,22 @@ def decode_dict(data):
     return data
 
 
+def numberOfAccounts(accountType):
+
+    count = 1
+    max_count = int(addon.getSetting(accountType+'_numaccounts'))
+    actualCount = 0
+    while True:
+        try:
+            if addon.getSetting(accountType+str(count)+'_username') != '':
+                actualCount = actualCount + 1
+        except:
+            break
+        if count == max_count:
+            break
+        count = count + 1
+    return actualCount
+
 
 #global variables
 plugin_url = sys.argv[0]
@@ -109,33 +125,29 @@ except :
 
 
 # retrieve settings
-username = addon.getSetting('username')
-password = addon.getSetting('password')
-auth_token = addon.getSetting('auth_token')
-auth_cookie = addon.getSetting('auth_cookie')
 user_agent = addon.getSetting('user_agent')
-save_auth_token = addon.getSetting('save_auth_token')
+
+#legacy account conversion
+try:
+    if addon.getSetting('username') == '':
+        username = addon.getSetting('username')
+        if username != '':
+            password  = addon.getSetting('password')
+            save_auth_token  = addon.getSetting('save_auth_token')
+            auth_token = addon.getSetting('auth_token')
+            auth_cookie = addon.getSetting('auth_cookie')
+        addon.setSetting('firedrive1_username', username)
+        addon.setSetting('firedrive1_password', password)
+        addon.setSetting('firedrive1_save_auth_token', save_auth_token)
+        addon.setSetting('firedrive1_auth_token', auth_token)
+        addon.setSetting('firedrive1_auth_cookie', auth_cookie)
+except :
+    pass
 
 mode = plugin_queries['mode']
 
 # make mode case-insensitive
 mode = mode.lower()
-
-# you need to have at least a username&password set or an authorization token
-if ((not mode == 'streamurl') and ((username == '' or password == '') and auth_token == '')):
-    xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
-    log(addon.getLocalizedString(30015), True)
-    xbmcplugin.endOfDirectory(plugin_handle)
-
-#let's log in
-firedrive = firedrive.firedrive(username, password, auth_token, auth_cookie, user_agent)
-
-# if we don't have an authorization token set for the plugin, set it with the recent login.
-#   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
-if auth_token == '' and save_auth_token == 'true':
-    addon.setSetting('auth_token', firedrive.auth)
-    addon.setSetting('auth_cookie', firedrive.cookie)
-
 
 
 log('plugin url: ' + plugin_url)
@@ -157,20 +169,106 @@ if mode == 'main' or mode == 'folder':
     except:
       cacheType = 0
 
-    videos = firedrive.getVideosList(folderID,cacheType)
+
+    instanceName = ''
+    try:
+        instanceName = plugin_queries['instance']
+    except:
+        pass
+
+    numberOfAccounts = numberOfAccounts('firedrive')
+
+    # show list of services
+    if numberOfAccounts > 1 and instanceName == '':
+        count = 1
+        max_count = int(addon.getSetting('firedrive_numaccounts'))
+        while True:
+            instanceName = 'firedrive'+str(count)
+            try:
+                username = addon.getSetting(instanceName+'_username')
+                if username != '':
+                    addDirectory('plugin://plugin.video.firedrive?mode=main&instance='+instanceName,username)
+            except:
+                break
+            if count == max_count:
+                break
+            count = count + 1
+
+    else:
+        # show index of accounts
+        if instanceName == '' and numberOfAccounts == 1:
+
+                count = 1
+                max_count = int(addon.getSetting('firedrive_numaccounts'))
+                while True:
+                    instanceName = 'firedrive'+str(count)
+                    try:
+                        username = addon.getSetting(instanceName+'_username')
+                        if username != '':
+                            password  = addon.getSetting(instanceName+'_password')
+                            save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+                            auth_token = addon.getSetting(instanceName+'_auth_token')
+                            auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+
+                            # you need to have at least a username&password set or an authorization token
+                            if ((username == '' or password == '') and auth_token == ''):
+                                xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
+                                log(addon.getLocalizedString(30015), True)
+                                xbmcplugin.endOfDirectory(plugin_handle)
+
+                            #let's log in
+                            firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+
+                    except:
+                        break
+
+                    if count == max_count:
+                        break
+                    count = count + 1
+
+        # show entries of a single account (such as folder)
+        elif instanceName != '':
+
+                    username = addon.getSetting(instanceName+'_username')
+                    password  = addon.getSetting(instanceName+'_password')
+                    save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+                    auth_token = addon.getSetting(instanceName+'_auth_token')
+                    auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+                    update_token_name = instanceName+'_auth_token'
+                    update_cookie_name = instanceName+'_auth_cookie'
 
 
-    folders = firedrive.getFolderList(folderID)
-    if folders:
-      for title in sorted(folders.iterkeys()):
-        addDirectory(folders[title],title)
+                    # you need to have at least a username&password set or an authorization token
+                    if ((username == '' or password == '') and auth_token == ''):
+                        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
+                        log(addon.getLocalizedString(30015), True)
+                        xbmcplugin.endOfDirectory(plugin_handle)
 
-    videos = firedrive.getVideosList(folderID)
-    if videos:
-      for title in sorted(videos.iterkeys()):
-        addVideo(videos[title]['url'],
+                    #let's log in
+                    firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+
+
+        videos = firedrive.getVideosList(folderID,cacheType)
+
+
+        folders = firedrive.getFolderList(folderID)
+        if folders:
+            for title in sorted(folders.iterkeys()):
+                addDirectory(folders[title],title)
+
+        videos = firedrive.getVideosList(folderID)
+        if videos:
+            for title in sorted(videos.iterkeys()):
+                addVideo(videos[title]['url'],
                              { 'title' : title , 'plot' : title }, title,
                              img=videos[title]['thumbnail'])
+
+        # if we don't have an authorization token set for the plugin, set it with the recent login.
+        #   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
+        if (firedrive.auth != auth_token or firedrive.cookie != auth_cookie) and save_auth_token == 'true':
+                        addon.setSetting(firedrive.instanceName + '_auth_token', firedrive.auth)
+                        addon.setSetting(firedrive.instanceName + '_auth_cookie', firedrive.cookie)
+
 
 #play a URL that is passed in (presumely requires authorizated session)
 elif mode == 'play':
@@ -187,12 +285,42 @@ elif mode == 'playvideo':
     # no need to select stream type
 
 
+    try:
+      instanceName = plugin_queries['instance']
+    except:
+      instanceName = 'firedrive1'
+
+    try:
+            username = addon.getSetting(instanceName+'_username')
+            password = addon.getSetting(instanceName+'_password')
+            save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+            auth_token = addon.getSetting(instanceName+'_auth_token')
+            auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+
+            # you need to have at least a username&password set or an authorization token
+            if ((not mode == 'streamurl') and ((username == '' or password == '') and auth_token == '')):
+                        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
+                        log(addon.getLocalizedString(30015), True)
+                        xbmcplugin.endOfDirectory(plugin_handle)
+
+
+            firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+
+    except :
+            pass
+
     videoURL = firedrive.getVideoLink(filename,0,False)
 
     item = xbmcgui.ListItem(path=videoURL)
     log('play url: ' + videoURL)
     item.setInfo( type="Video", infoLabels={ "Title": filename , "Plot" : filename } )
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
+
+    # if we don't have an authorization token set for the plugin, set it with the recent login.
+    #   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
+    if (firedrive.auth != auth_token or firedrive.cookie != auth_cookie) and save_auth_token == 'true':
+                        addon.setSetting(firedrive.instanceName + '_auth_token', firedrive.auth)
+                        addon.setSetting(firedrive.instanceName + '_auth_cookie', firedrive.cookie)
 
 
 
@@ -217,6 +345,30 @@ elif mode == 'streamvideo':
     except :
         pass
 
+    try:
+      instanceName = plugin_queries['instance']
+    except:
+      instanceName = 'firedrive1'
+
+    try:
+            username = addon.getSetting(instanceName+'_username')
+            password = addon.getSetting(instanceName+'_password')
+            save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+            auth_token = addon.getSetting(instanceName+'_auth_token')
+            auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+
+            # you need to have at least a username&password set or an authorization token
+            if ((not mode == 'streamurl') and ((username == '' or password == '') and auth_token == '')):
+                        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
+                        log(addon.getLocalizedString(30015), True)
+                        xbmcplugin.endOfDirectory(plugin_handle)
+
+
+            firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+
+    except :
+            pass
+
     # immediately play resulting (is a video)
     videoURL = firedrive.getVideoLink(filename, firedrive.CACHE_TYPE_STREAM, force_sd)
     item = xbmcgui.ListItem(path=videoURL)
@@ -224,12 +376,45 @@ elif mode == 'streamvideo':
     item.setInfo( type="Video", infoLabels={ "Title": filename , "Plot" : filename } )
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
+
+    # if we don't have an authorization token set for the plugin, set it with the recent login.
+    #   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
+    if (firedrive.auth != auth_token or firedrive.cookie != auth_cookie) and save_auth_token == 'true':
+                        addon.setSetting(firedrive.instanceName + '_auth_token', firedrive.auth)
+                        addon.setSetting(firedrive.instanceName + '_auth_cookie', firedrive.cookie)
+
+
+
 #force stream - play a video given its exact-title
 elif mode == 'streamaudio' or mode == 'playaudio':
     try:
       filename = plugin_queries['filename']
     except:
       title = 0
+
+    try:
+      instanceName = plugin_queries['instance']
+    except:
+      instanceName = 'firedrive1'
+
+    try:
+            username = addon.getSetting(instanceName+'_username')
+            password = addon.getSetting(instanceName+'_password')
+            save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+            auth_token = addon.getSetting(instanceName+'_auth_token')
+            auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+
+            # you need to have at least a username&password set or an authorization token
+            if ((username == '' or password == '') and auth_token == ''):
+                        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
+                        log(addon.getLocalizedString(30015), True)
+                        xbmcplugin.endOfDirectory(plugin_handle)
+
+
+            firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+
+    except :
+            pass
 
     # immediately play resulting (is a video)
     videoURL = firedrive.getAudioLink(filename)
@@ -239,12 +424,37 @@ elif mode == 'streamaudio' or mode == 'playaudio':
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 
+    # if we don't have an authorization token set for the plugin, set it with the recent login.
+    #   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
+    if (firedrive.auth != auth_token or firedrive.cookie != auth_cookie) and save_auth_token == 'true':
+                        addon.setSetting(firedrive.instanceName + '_auth_token', firedrive.auth)
+                        addon.setSetting(firedrive.instanceName + '_auth_cookie', firedrive.cookie)
+
+
+
+
 elif mode == 'streamurl':
     try:
       url = plugin_queries['url']
     except:
       url = 0
 
+    try:
+      instanceName = plugin_queries['instance']
+    except:
+      instanceName = 'firedrive1'
+
+    try:
+            username = addon.getSetting(instanceName+'_username')
+            password = addon.getSetting(instanceName+'_password')
+            save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+            auth_token = addon.getSetting(instanceName+'_auth_token')
+            auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+
+            firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+
+    except :
+            pass
 
     # immediately play resulting (is a video)
     videoURL = firedrive.getPublicLink(url)
@@ -255,17 +465,51 @@ elif mode == 'streamurl':
 
 
 
+    # if we don't have an authorization token set for the plugin, set it with the recent login.
+    #   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
+    if (firedrive.auth != auth_token or firedrive.cookie != auth_cookie) and save_auth_token == 'true':
+                        addon.setSetting(firedrive.instanceName + '_auth_token', firedrive.auth)
+                        addon.setSetting(firedrive.instanceName + '_auth_cookie', firedrive.cookie)
+
+
+
+
 #clear the authorization token
 elif mode == 'clearauth':
-    addon.setSetting('auth_token', '')
-    addon.setSetting('auth_cookie', '')
 
+    instanceName = ''
+    try:
+        instanceName = plugin_queries['instance']
+    except:
+        pass
 
+    numberOfAccounts = numberOfAccounts('firedrive')
 
-# update the authorization token in the configuration file if we had to login for a new one during this execution run
-if auth_token != firedrive.auth and save_auth_token == 'true':
-    addon.setSetting('auth_token', firedrive.auth)
-    addon.setSetting('auth_cookie', firedrive.cookie)
+    # clear all accounts
+    if numberOfAccounts >= 1 and instanceName == '':
+        count = 1
+        max_count = int(addon.getSetting('firedrive_numaccounts'))
+        while True:
+            instanceName = 'firedrive'+str(count)
+            try:
+                addon.setSetting(instanceName + '_auth_token', '')
+                addon.setSetting(instanceName + '_auth_cookie', '')
+            except:
+                break
+            if count == max_count:
+                break
+            count = count + 1
+
+    elif instanceName != '':
+
+            try:
+                addon.setSetting(instanceName + '_auth_token', '')
+                addon.setSetting(instanceName + '_auth_cookie', '')
+            except:
+                pass
+
+    xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30023))
+
 
 
 xbmcplugin.endOfDirectory(plugin_handle)

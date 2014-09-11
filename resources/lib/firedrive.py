@@ -49,7 +49,8 @@ class firedrive:
     ##
     # initialize (setting 1) username, 2) password, 3) authorization token, 4) user agent string
     ##
-    def __init__(self, user, password, auth, cookie, user_agent):
+    def __init__(self, instanceName, user, password, auth, cookie, user_agent):
+        self.instanceName = instanceName
         self.user = user
         self.password = password
         self.auth = auth
@@ -232,9 +233,9 @@ class firedrive:
 
                 if cacheType == self.CACHE_TYPE_STREAM:
                   # streaming
-                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&filename=' + fileID, 'thumbnail' : img}
+                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID, 'thumbnail' : img}
                 else:
-                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&filename=' + fileID, 'thumbnail' : img}
+                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID, 'thumbnail' : img}
 
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
@@ -244,7 +245,7 @@ class firedrive:
 
                 log('found audio %s %s' % (title, filename))
 
-                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playAudio&filename=' + fileID, 'thumbnail' : img}
+                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID, 'thumbnail' : img}
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'other\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
@@ -253,7 +254,7 @@ class firedrive:
 
                 log('found other %s %s' % (title, filename))
 
-                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&filename=' + fileID, 'thumbnail' : img}
+                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID, 'thumbnail' : img}
 
 
             response.close()
@@ -315,7 +316,7 @@ class firedrive:
                 log('found folder %s %s' % (folderID, folderName))
 
                 # streaming
-                folders[folderName] = 'plugin://plugin.video.firedrive?mode=folder&folderID=' + folderID
+                folders[folderName] = 'plugin://plugin.video.firedrive?mode=folder&instance='+self.instanceName+'&folderID=' + folderID
 
             response.close()
 
