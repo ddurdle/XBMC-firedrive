@@ -233,9 +233,9 @@ class firedrive:
 
                 if cacheType == self.CACHE_TYPE_STREAM:
                   # streaming
-                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID, 'thumbnail' : img}
+                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
                 else:
-                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID, 'thumbnail' : img}
+                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
 
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
@@ -245,7 +245,7 @@ class firedrive:
 
                 log('found audio %s %s' % (title, filename))
 
-                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID, 'thumbnail' : img}
+                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'other\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
@@ -254,7 +254,7 @@ class firedrive:
 
                 log('found other %s %s' % (title, filename))
 
-                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID, 'thumbnail' : img}
+                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
 
 
             response.close()
@@ -529,11 +529,14 @@ class firedrive:
         for r in re.finditer('(mp3)\:\"([^\"]+)' ,response_data, re.DOTALL):
              streamType,streamURL = r.groups()
 
+        # fetch title
+        for r in re.finditer('\<b\>(Name\:)\<\/b\> ([^\<]+)\<br\>' ,response_data, re.DOTALL):
+             nameType,title = r.groups()
 
         response.close()
 
 
-        return streamURL + '|'+self.getHeadersEncoded()
+        return (title,streamURL + '|'+self.getHeadersEncoded())
 
 
 
