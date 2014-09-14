@@ -44,6 +44,7 @@ class firedrive:
     CACHE_TYPE_MEMORY = 0
     CACHE_TYPE_DISK = 1
     CACHE_TYPE_STREAM = 2
+    FILE_URL = 'http://www.firedrive.com/file/'
 
     API_VERSION = '3.0'
     ##
@@ -308,8 +309,7 @@ class firedrive:
                   return
                 response_data = response.read()
 
-            # parsing page for videos
-            # video-entry
+            # parsing page for folders
             for r in re.finditer('"f_id":"([^\"]+)".*?"f_fullname":"([^\"]+)"' ,response_data, re.DOTALL):
                 folderID, folderName = r.groups()
 
@@ -324,6 +324,64 @@ class firedrive:
 
 
 
+    ##
+    # retrieve a list of folders
+    #   parameters: folder is the current folderID
+    #   returns: list of videos
+    ##
+    def getFolderIDList(self, folderID=0):
+
+        # retrieve all documents
+        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.auth, '_': 1394486104901})
+
+        url = 'http://www.firedrive.com/action/?'+ params
+
+        folders = {}
+        if True:
+            log('url = %s header = %s' % (url, self.getHeadersList()))
+            req = urllib2.Request(url, None, self.getHeadersList())
+
+            # if action fails, validate login
+            try:
+              response = urllib2.urlopen(req)
+            except urllib2.URLError, e:
+              if e.code == 403 or e.code == 401:
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+              else:
+                log(str(e), True)
+                return
+
+            response_data = response.read()
+
+            #if authorization cookie is broken, response will be empty, so log in again
+            if response_data == '':
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+                response_data = response.read()
+
+            # parsing page for folders
+            for r in re.finditer('"f_id":"([^\"]+)".*?"f_fullname":"([^\"]+)"' ,response_data, re.DOTALL):
+                folderID, folderName = r.groups()
+
+                log('found folder %s %s' % (folderID, folderName))
+
+                # streaming
+                folders[folderName] =  folderID
+
+            response.close()
+
+        return folders
     ##
     # retrieve a audio link
     #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
@@ -539,5 +597,105 @@ class firedrive:
         return (title,streamURL + '|'+self.getHeadersEncoded())
 
 
+    ##
+    # retrieve a list of videos, using playback type stream
+    #   parameters: prompt for video quality (optional), cache type (optional)
+    #   returns: list of videos
+    ##
+    def buildSTRM(self, path, folderID=0,savePublic=True):
+
+        import xbmcvfs
+        xbmcvfs.mkdir(path)
+
+        # retrieve all documents
+        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.auth, '_': 1394486104901})
+
+        url = 'http://www.firedrive.com/action/?'+ params
+
+        videos = {}
+        if True:
+            log('url = %s header = %s' % (url, self.getHeadersList()))
+            req = urllib2.Request(url, None, self.getHeadersList())
+
+            # if action fails, validate login
+            try:
+              response = urllib2.urlopen(req)
+            except urllib2.URLError, e:
+              if e.code == 403 or e.code == 401:
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+              else:
+                log(str(e), True)
+                return
+
+            response_data = response.read()
+
+            #if authorization cookie is broken, response will be empty, so log in again
+            if response_data == '':
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  log(str(e), True)
+                  return
+                response_data = response.read()
+
+            # parsing page for videos
+            # video-entry
+            for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'video\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
+                img,filename,title,fileID = r.groups()
+                img = re.sub('\\\\', '', img)
+                img = 'http://static.firedrive.com/'+img
+
+
+                log('found video %s %s' % (title, filename))
+
+                filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
+                strmFile = open(filename, "w")
+
+#                if cacheType == self.CACHE_TYPE_STREAM:
+                  # streaming
+#                  strmFile.write('plugin://plugin.video.firedrive?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title+'\n')
+#                else:
+
+                strmFile.write('plugin://plugin.video.firedrive?mode=streamURL&url=' + self.FILE_URL+ fileID+'\n')
+
+                strmFile.close()
+
+
+            for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
+                img,filename,title,fileID = r.groups()
+                img = re.sub('\\\\', '', img)
+                img = 'http://static.firedrive.com/'+img
+
+                log('found audio %s %s' % (title, filename))
+
+                filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
+                strmFile = open(filename, "w")
+
+                strmFile.write('plugin://plugin.video.firedrive?mode=streamURL&url=' + self.FILE_URL+ fileID+'\n')
+                strmFile.close()
+
+
+            for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'other\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
+                img,filename,title,fileID = r.groups()
+                img = re.sub('\\\\', '', img)
+                img = 'http://static.firedrive.com/'+img
+
+                log('found other %s %s' % (title, filename))
+
+                filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
+                strmFile = open(filename, "w")
+
+                strmFile.write('plugin://plugin.video.firedrive?mode=streamURL&url=' + self.FILE_URL+ fileID+'\n')
+                strmFile.close()
+
+            response.close()
 
 

@@ -83,4 +83,9 @@
 
     </category>
 
+    <category label="30024">
+        <setting id="path" type="folder" label="30026" default="" />
+        <setting type="action" label="30025" option="close" action="RunPlugin(plugin://plugin.video.firedrive?mode=buildstrm)"/>
+    </category>
+
 </settings>

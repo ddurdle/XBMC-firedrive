@@ -489,6 +489,61 @@ elif mode == 'streamurl':
                         addon.setSetting(firedrive.instanceName + '_auth_cookie', firedrive.cookie)
 
 
+#create strm files
+elif mode == 'buildstrm':
+
+
+    try:
+        path = addon.getSetting('path')
+    except:
+        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30000), 'files','',False,False,'')
+
+    if path == '':
+        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30000), 'files','',False,False,'')
+
+    returnPrompt = xbmcgui.Dialog().yesno(addon.getLocalizedString(30000), addon.getLocalizedString(30027) + path +  '?')
+
+
+    if returnPrompt:
+
+
+        numberOfAccounts = numberOfAccounts('firedrive')
+
+        count = 1
+        max_count = int(addon.getSetting('firedrive_numaccounts'))
+        while True:
+            instanceName = 'firedrive'+str(count)
+            try:
+                username = addon.getSetting(instanceName+'_username')
+                if username != '':
+
+                    try:
+                        username = addon.getSetting(instanceName+'_username')
+                        password = addon.getSetting(instanceName+'_password')
+                        save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+                        auth_token = addon.getSetting(instanceName+'_auth_token')
+                        auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+
+                        firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+                    except :
+                        pass
+
+                    savePublic = True
+                    firedrive.buildSTRM(path+username,0,savePublic)
+
+                    folders = firedrive.getFolderIDList(0)
+                    if folders:
+                        for title in folders.iterkeys():
+                            firedrive.buildSTRM(path+username+'/'+title + '/',folders[title],savePublic)
+
+            except:
+                break
+            if count == max_count:
+                break
+            count = count + 1
+
+
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30028))
 
 
 #clear the authorization token

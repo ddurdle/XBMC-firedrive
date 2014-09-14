@@ -1,3 +1,5 @@
+Version 0.3.2
+- added Library STRM build function in settings
 Version 0.3.1
 - fix title to display properly and consistently
 Version 0.3.0
