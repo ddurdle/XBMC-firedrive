@@ -1,3 +1,5 @@
+Version 0.3.3
+- fix for automatically converting old settings account configuration to new settings
 Version 0.3.2
 - added Library STRM build function in settings
 Version 0.3.1

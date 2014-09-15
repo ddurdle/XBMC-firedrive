@@ -127,22 +127,7 @@ except :
 # retrieve settings
 user_agent = addon.getSetting('user_agent')
 
-#legacy account conversion
-try:
-    if addon.getSetting('username') == '':
-        username = addon.getSetting('username')
-        if username != '':
-            password  = addon.getSetting('password')
-            save_auth_token  = addon.getSetting('save_auth_token')
-            auth_token = addon.getSetting('auth_token')
-            auth_cookie = addon.getSetting('auth_cookie')
-        addon.setSetting('firedrive1_username', username)
-        addon.setSetting('firedrive1_password', password)
-        addon.setSetting('firedrive1_save_auth_token', save_auth_token)
-        addon.setSetting('firedrive1_auth_token', auth_token)
-        addon.setSetting('firedrive1_auth_cookie', auth_cookie)
-except :
-    pass
+
 
 mode = plugin_queries['mode']
 
@@ -226,6 +211,34 @@ if mode == 'main' or mode == 'folder':
                         break
                     count = count + 1
 
+        # no accounts defined
+        elif numberOfAccounts == 0:
+
+            #legacy account conversion
+            try:
+                username = addon.getSetting('username')
+                if username != '':
+                    password  = addon.getSetting('password')
+                    save_auth_token  = addon.getSetting('save_auth_token')
+                    auth_token = addon.getSetting('auth_token')
+                    auth_cookie = addon.getSetting('auth_cookie')
+                    addon.setSetting('firedrive1_username', username)
+                    addon.setSetting('firedrive1_password', password)
+                    addon.setSetting('firedrive1_save_auth_token', save_auth_token)
+                    addon.setSetting('firedrive1_auth_token', auth_token)
+                    addon.setSetting('firedrive1_auth_cookie', auth_cookie)
+                else:
+                    xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
+                    log(addon.getLocalizedString(30015), True)
+                    xbmcplugin.endOfDirectory(plugin_handle)
+            except :
+                    xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
+                    log(addon.getLocalizedString(30015), True)
+                    xbmcplugin.endOfDirectory(plugin_handle)
+            #let's log in
+            firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+
+
         # show entries of a single account (such as folder)
         elif instanceName != '':
 
@@ -234,9 +247,6 @@ if mode == 'main' or mode == 'folder':
                     save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
                     auth_token = addon.getSetting(instanceName+'_auth_token')
                     auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
-                    update_token_name = instanceName+'_auth_token'
-                    update_cookie_name = instanceName+'_auth_cookie'
-
 
                     # you need to have at least a username&password set or an authorization token
                     if ((username == '' or password == '') and auth_token == ''):
@@ -248,6 +258,7 @@ if mode == 'main' or mode == 'folder':
                     firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
 
 
+
         videos = firedrive.getVideosList(folderID,cacheType)
 
 
@@ -256,7 +267,7 @@ if mode == 'main' or mode == 'folder':
             for title in sorted(folders.iterkeys()):
                 addDirectory(folders[title],title)
 
-        videos = firedrive.getVideosList(folderID)
+#        videos = firedrive.getVideosList(folderID)
         if videos:
             for title in sorted(videos.iterkeys()):
                 addVideo(videos[title]['url'],
