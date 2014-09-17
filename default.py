@@ -49,16 +49,27 @@ def addVideo(url, infolabels, label, img='', fanart='', total_items=0,
     listitem.setInfo('video', infolabels)
     listitem.setProperty('IsPlayable', 'true')
     listitem.setProperty('fanart_image', fanart)
+    cm=[]
+    cleanURL = re.sub('---', '', url)
+    cleanURL = re.sub('&', '---', cleanURL)
+    cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin(plugin://plugin.video.firedrive?mode=buildstrm&title='+infolabels['title']+'&streamurl='+cleanURL+')', ))
+#    listitem.addContextMenuItems( commands )
     if cm:
         listitem.addContextMenuItems(cm, cm_replace)
     xbmcplugin.addDirectoryItem(plugin_handle, url, listitem,
                                 isFolder=False, totalItems=total_items)
 
-def addDirectory(url, title, img='', fanart='', total_items=0):
+def addDirectory(url, title, img='', fanart='', total_items=0, folderID='', instanceName=''):
     log('adding dir: %s - %s' % (title, url))
     listitem = xbmcgui.ListItem(decode(title), iconImage=img, thumbnailImage=img)
     if not fanart:
         fanart = addon.getAddonInfo('path') + '/fanart.jpg'
+
+    if folderID != '' and 0:
+        cm=[]
+        cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin(plugin://plugin.video.firedrive?mode=buildstrm&title='+title+'&instanceName='+str(instanceName)+'&folderID='+str(folderID)+')', ))
+        listitem.addContextMenuItems(cm, False)
+
     listitem.setProperty('fanart_image', fanart)
     xbmcplugin.addDirectoryItem(plugin_handle, url, listitem,
                                 isFolder=True, totalItems=total_items)
@@ -265,7 +276,7 @@ if mode == 'main' or mode == 'folder':
         folders = firedrive.getFolderList(folderID)
         if folders:
             for title in sorted(folders.iterkeys()):
-                addDirectory(folders[title],title)
+                addDirectory(folders[title],title,folderID=folderID,instanceName=firedrive.instanceName)
 
 #        videos = firedrive.getVideosList(folderID)
         if videos:
@@ -512,46 +523,98 @@ elif mode == 'buildstrm':
     if path == '':
         path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30000), 'files','',False,False,'')
 
-    returnPrompt = xbmcgui.Dialog().yesno(addon.getLocalizedString(30000), addon.getLocalizedString(30027) + path +  '?')
+    returnPrompt = xbmcgui.Dialog().yesno(addon.getLocalizedString(30000), addon.getLocalizedString(30027) + '\n'+path +  '?')
 
 
     if returnPrompt:
 
+        try:
+            url = plugin_queries['streamurl']
+            title = plugin_queries['title']
+            url = re.sub('---', '&', url)
+        except:
+            url=''
 
-        numberOfAccounts = numberOfAccounts('firedrive')
+        if url != '':
 
-        count = 1
-        max_count = int(addon.getSetting('firedrive_numaccounts'))
-        while True:
-            instanceName = 'firedrive'+str(count)
+                import os
+
+                filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
+                strmFile = open(filename, "w")
+
+                strmFile.write(url+'\n')
+                strmFile.close()
+
+        else:
+
             try:
-                username = addon.getSetting(instanceName+'_username')
-                if username != '':
+                folderID = plugin_queries['folderID']
+                title = plugin_queries['title']
+                instanceName = plugin_queries['instanceName']
+            except:
+                folderID = ''
+
+
+
+            if folderID != '':
 
                     try:
                         username = addon.getSetting(instanceName+'_username')
-                        password = addon.getSetting(instanceName+'_password')
-                        save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
-                        auth_token = addon.getSetting(instanceName+'_auth_token')
-                        auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+                        if username != '':
 
-                        firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
-                    except :
+                            try:
+                                username = addon.getSetting(instanceName+'_username')
+                                password = addon.getSetting(instanceName+'_password')
+                                save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+                                auth_token = addon.getSetting(instanceName+'_auth_token')
+                                auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+
+                                firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+                            except :
+                                pass
+
+                            savePublic = True
+                            firedrive.buildSTRM(path+'/'+title + '/',folderID,savePublic)
+
+                    except:
                         pass
 
-                    savePublic = True
-                    firedrive.buildSTRM(path+username,0,savePublic)
+            else:
 
-                    folders = firedrive.getFolderIDList(0)
-                    if folders:
-                        for title in folders.iterkeys():
-                            firedrive.buildSTRM(path+username+'/'+title + '/',folders[title],savePublic)
+                numberOfAccounts = numberOfAccounts('firedrive')
 
-            except:
-                break
-            if count == max_count:
-                break
-            count = count + 1
+                count = 1
+                max_count = int(addon.getSetting('firedrive_numaccounts'))
+                while True:
+                    instanceName = 'firedrive'+str(count)
+                    try:
+                        username = addon.getSetting(instanceName+'_username')
+                        if username != '':
+
+                            try:
+                                username = addon.getSetting(instanceName+'_username')
+                                password = addon.getSetting(instanceName+'_password')
+                                save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+                                auth_token = addon.getSetting(instanceName+'_auth_token')
+                                auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+
+                                firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+                            except :
+                                pass
+
+                            savePublic = True
+                            firedrive.buildSTRM(path+username,0,savePublic)
+
+                            folders = firedrive.getFolderIDList(0)
+                            if folders:
+                                for title in folders.iterkeys():
+                                    firedrive.buildSTRM(path+username+'/'+title + '/',folders[title],savePublic)
+
+                    except:
+                        break
+                    if count == max_count:
+                        break
+                    count = count + 1
 
 
         xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30028))

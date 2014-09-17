@@ -1,3 +1,5 @@
+Version 0.3.4
+- add context item to build non-public strm
 Version 0.3.3
 - fix for automatically converting old settings account configuration to new settings
 Version 0.3.2

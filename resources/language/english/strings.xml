@@ -26,7 +26,7 @@
     <string id="30024">Library</string>
     <string id="30025">Click to Generate STRMs</string>
     <string id="30026">Location to Store STRMs</string>
-    <string id="30027">Do you want to create the STRM files in the path </string>
+    <string id="30027">Do you want to create the STRM files in the path</string>
     <string id="30028">STRM file creation complete.</string>
     <string id="30030">Login Details for Account #1</string>
     <string id="30031">Login Details for Account #2</string>
@@ -38,4 +38,6 @@
     <string id="30039">Login Details for Account #8</string>
     <string id="30040">Login Details for Account #9</string>
     <string id="30041">Login Details for Account #10</string>
+    <string id="30042">Generate Non-public STRM</string>
+
 </strings>
