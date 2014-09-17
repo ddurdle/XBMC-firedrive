@@ -1,3 +1,5 @@
+Version 0.3.5
+- added an options menu: clear authorization + cookies & Generate STRMs
 Version 0.3.4
 - add context item to build non-public strm
 Version 0.3.3

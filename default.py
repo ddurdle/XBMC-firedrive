@@ -150,6 +150,8 @@ log('plugin url: ' + plugin_url)
 log('plugin queries: ' + str(plugin_queries))
 log('plugin handle: ' + str(plugin_handle))
 
+if mode == 'main':
+    addDirectory('plugin://plugin.video.firedrive?mode=options','<<'+addon.getLocalizedString(30043)+'>>')
 
 #dump a list of videos available to play
 if mode == 'main' or mode == 'folder':
@@ -272,7 +274,6 @@ if mode == 'main' or mode == 'folder':
 
         videos = firedrive.getVideosList(folderID,cacheType)
 
-
         folders = firedrive.getFolderList(folderID)
         if folders:
             for title in sorted(folders.iterkeys()):
@@ -290,6 +291,7 @@ if mode == 'main' or mode == 'folder':
         if (firedrive.auth != auth_token or firedrive.cookie != auth_cookie) and save_auth_token == 'true':
                         addon.setSetting(firedrive.instanceName + '_auth_token', firedrive.auth)
                         addon.setSetting(firedrive.instanceName + '_auth_cookie', firedrive.cookie)
+
 
 
 #play a URL that is passed in (presumely requires authorizated session)
@@ -518,15 +520,16 @@ elif mode == 'buildstrm':
     try:
         path = addon.getSetting('path')
     except:
-        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30000), 'files','',False,False,'')
+        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), 'files','',False,False,'')
 
     if path == '':
-        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30000), 'files','',False,False,'')
+        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), 'files','',False,False,'')
 
-    returnPrompt = xbmcgui.Dialog().yesno(addon.getLocalizedString(30000), addon.getLocalizedString(30027) + '\n'+path +  '?')
+    if path != '':
+        returnPrompt = xbmcgui.Dialog().yesno(addon.getLocalizedString(30000), addon.getLocalizedString(30027) + '\n'+path +  '?')
 
 
-    if returnPrompt:
+    if path != '' and returnPrompt:
 
         try:
             url = plugin_queries['streamurl']
@@ -655,6 +658,10 @@ elif mode == 'clearauth':
                 pass
 
     xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30023))
+
+if mode == 'options' or mode == 'buildstrm' or mode == 'clearauth':
+    addDirectory('plugin://plugin.video.firedrive?mode=clearauth','<<'+addon.getLocalizedString(30018)+'>>')
+    addDirectory('plugin://plugin.video.firedrive?mode=buildstrm','<<'+addon.getLocalizedString(30025)+'>>')
 
 
 
