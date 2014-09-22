@@ -17,6 +17,9 @@
 '''
 
 from resources.lib import firedrive
+from resources.lib import gPlayer
+from resources.lib import tvWindow
+
 import sys
 import urllib
 import cgi
@@ -291,6 +294,68 @@ if mode == 'main' or mode == 'folder':
         if (firedrive.auth != auth_token or firedrive.cookie != auth_cookie) and save_auth_token == 'true':
                         addon.setSetting(firedrive.instanceName + '_auth_token', firedrive.auth)
                         addon.setSetting(firedrive.instanceName + '_auth_cookie', firedrive.cookie)
+
+#play a URL that is passed in (presumely requires authorizated session)
+elif mode == 'play2':
+    try:
+      url = plugin_queries['url']
+    except:
+      url = 0
+
+    try:
+      instanceName = plugin_queries['instance']
+    except:
+      instanceName = 'firedrive1'
+
+    try:
+            username = addon.getSetting(instanceName+'_username')
+            password = addon.getSetting(instanceName+'_password')
+            save_auth_token  = addon.getSetting(instanceName+'_save_auth_token')
+            auth_token = addon.getSetting(instanceName+'_auth_token')
+            auth_cookie = addon.getSetting(instanceName+'_auth_cookie')
+
+            firedrive = firedrive.firedrive(instanceName, username, password, auth_token, auth_cookie, user_agent)
+
+    except :
+            pass
+
+
+    episodes = []
+    # immediately play resulting (is a video)
+    (title,videoURL) = firedrive.getPublicLink(url)
+    episodes.append(videoURL)
+    player = gPlayer.gPlayer()
+    player.setContent(episodes)
+
+    #item = xbmcgui.ListItem(path=videoURL)
+    #log('play url: ' + videoURL)
+    #item.setInfo( type="Video", infoLabels={ "Title": title , "Plot" : title } )
+    #xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
+
+    while 1:
+        player.next()
+        xbmc.sleep(1000)
+
+#    w = tvWindow.tvWindow("tvWindow.xml",addon.getAddonInfo('path'),"Default")
+#    w.setPlayer(player)
+#    w.doModal()
+
+#    item = xbmcgui.ListItem(path=videoURL)
+#    log('play url: ' + videoURL)
+#    item.setInfo( type="Video", infoLabels={ "Title": title , "Plot" : title } )
+#    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
+#    player.PlayStream(videoURL)
+
+#    player.next()
+
+
+
+    # if we don't have an authorization token set for the plugin, set it with the recent login.
+    #   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
+    if (firedrive.auth != auth_token or firedrive.cookie != auth_cookie) and save_auth_token == 'true':
+                        addon.setSetting(firedrive.instanceName + '_auth_token', firedrive.auth)
+                        addon.setSetting(firedrive.instanceName + '_auth_cookie', firedrive.cookie)
+
 
 
 

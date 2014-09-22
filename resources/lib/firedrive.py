@@ -21,6 +21,9 @@
 import os
 import re
 import urllib, urllib2
+from resources.lib import authorization
+from resources.lib import account
+
 
 
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin
@@ -50,16 +53,20 @@ class firedrive:
     ##
     # initialize (setting 1) username, 2) password, 3) authorization token, 4) user agent string
     ##
-    def __init__(self, instanceName, user, password, auth, cookie, user_agent):
+    def __init__(self, instanceName, username, password, auth, cookie, user_agent):
+        self.account = account.account(instanceName,username,password)
         self.instanceName = instanceName
-        self.user = user
-        self.password = password
+#        self.username = username
+#        self.password = password
+        self.authorization = authorization.authorization()
+        self.authorization.setToken('auth',auth)
+        self.authorization.setToken('cookie',cookie)
         self.auth = auth
         self.cookie = cookie
         self.user_agent = user_agent
 
         #public playback only -- no authentication
-        if user == '':
+        if self.account.username == '':
             return
 
         # if we have an authorization token set, try to use it
@@ -84,8 +91,8 @@ class firedrive:
         url = 'http://auth.firedrive.com/'
 
         values = {
-                  'pass' : self.password,
-                  'user' : self.user,
+                  'pass' : self.account.password,
+                  'user' : self.account.username,
                   'remember' : 1,
                   'json' : 1,
                   'user_token' : '',
@@ -113,8 +120,8 @@ class firedrive:
             setCookie,authCookie = r.groups()
 
         if (authCookie != 0):
-            self.cookie = authCookie
-            header = { 'User-Agent' : self.user_agent, 'Cookie' : 'auth='+self.cookie+'; exp=1' }
+            self.authorization.setToken('cookie',authCookie)
+            header = { 'User-Agent' : self.user_agent, 'Cookie' : 'auth='+authCookie+'; exp=1' }
 
 
         statusResult = 0
@@ -156,6 +163,7 @@ class firedrive:
 
         # save authorization token
         self.auth = userID
+        self.authorization.setToken('auth',userID)
         return
 
 
@@ -164,8 +172,9 @@ class firedrive:
     #   returns: list containing the header
     ##
     def getHeadersList(self):
-        if (self.cookie != '' or self.cookie != 0):
-            return { 'User-Agent' : self.user_agent, 'Cookie' : 'auth='+self.cookie+'; exp=1' }
+        cookie = self.authorization.getToken('cookie')
+        if (cookie != '' and cookie != 0):
+            return { 'User-Agent' : self.user_agent, 'Cookie' : 'auth='+cookie+'; exp=1' }
         else:
             return { 'User-Agent' : self.user_agent }
 
@@ -184,7 +193,7 @@ class firedrive:
     def getVideosList(self, folderID=0, cacheType=0):
 
         # retrieve all documents
-        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.auth, '_': 1394486104901})
+        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.authorization.getToken('auth'), '_': 1394486104901})
 
         url = 'http://www.firedrive.com/action/?'+ params
 
@@ -271,7 +280,7 @@ class firedrive:
     def getFolderList(self, folderID=0):
 
         # retrieve all documents
-        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.auth, '_': 1394486104901})
+        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.authorization.getToken('auth'), '_': 1394486104901})
 
         url = 'http://www.firedrive.com/action/?'+ params
 
@@ -332,7 +341,7 @@ class firedrive:
     def getFolderIDList(self, folderID=0):
 
         # retrieve all documents
-        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.auth, '_': 1394486104901})
+        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.authorization.getToken('auth'), '_': 1394486104901})
 
         url = 'http://www.firedrive.com/action/?'+ params
 
@@ -463,7 +472,7 @@ class firedrive:
 
 
         # search by video title
-        params = urllib.urlencode({'file_id': filename, 'group_id': 0, 'page': 1, 'total':7, 'index':0, 'all':'false','user_token': self.auth, '_': 1394486104901})
+        params = urllib.urlencode({'file_id': filename, 'group_id': 0, 'page': 1, 'total':7, 'index':0, 'all':'false','user_token': self.authorization.getToken('auth'), '_': 1394486104901})
         url = 'http://www.firedrive.com/view_media/?'+params
 
 
@@ -608,7 +617,7 @@ class firedrive:
         xbmcvfs.mkdir(path)
 
         # retrieve all documents
-        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.auth, '_': 1394486104901})
+        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.authorization.getToken('auth'), '_': 1394486104901})
 
         url = 'http://www.firedrive.com/action/?'+ params
 
