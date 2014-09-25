@@ -33,7 +33,7 @@ class authorization:
     # Set the token of name with value provided.
     ##
     def setToken(self,name,value):
-        if name in auth:
+        if not self.auth and name in self.auth:
             self.isUpdated = True
         self.auth[name] = value
 
@@ -51,5 +51,12 @@ class authorization:
     ##
     def getTokenCount(self):
         return len(self.auth)
+
+    ##
+    # Save the latest authorization tokens
+    ##
+    def saveTokens(self,instanceName,addon):
+        for token in self.auth:
+            addon.setSetting(instanceName + '_'+token, self.auth[token])
 
 

@@ -1,6 +1,6 @@
 '''
     firedrive XBMC Plugin
-    Copyright (C) 2013 dmdsoftware
+    Copyright (C) 2013-2014 ddurdle
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -53,16 +53,17 @@ class firedrive:
     ##
     # initialize (setting 1) username, 2) password, 3) authorization token, 4) user agent string
     ##
-    def __init__(self, instanceName, username, password, auth, cookie, user_agent):
+    def __init__(self, PLUGIN_URL, instanceName, username, password, auth, cookie, user_agent):
+        self.PLUGIN_URL = PLUGIN_URL
         self.account = account.account(instanceName,username,password)
         self.instanceName = instanceName
-#        self.username = username
-#        self.password = password
+#        self.username = username##*
+#        self.password = password##*
         self.authorization = authorization.authorization()
-        self.authorization.setToken('auth',auth)
-        self.authorization.setToken('cookie',cookie)
-        self.auth = auth
-        self.cookie = cookie
+        self.authorization.setToken('auth_token',auth)
+        self.authorization.setToken('auth_cookie',cookie)
+#        self.auth = auth##*
+#        self.cookie = cookie
         self.user_agent = user_agent
 
         #public playback only -- no authentication
@@ -78,6 +79,15 @@ class firedrive:
           log('no token - logging in')
           self.login();
           return
+
+    ##
+    # if we don't have an authorization token set for the plugin, set it with the recent login.
+    #   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
+    ##
+    def updateAuthorization(self,addon):
+        if self.authorization.isUpdated and addon.getSetting(instanceName+'_save_auth_token') == 'true':
+            self.authorization.saveTokens(self.instanceName,addon)
+
 
 
     ##
@@ -120,7 +130,7 @@ class firedrive:
             setCookie,authCookie = r.groups()
 
         if (authCookie != 0):
-            self.authorization.setToken('cookie',authCookie)
+            self.authorization.setToken('auth_cookie',authCookie)
             header = { 'User-Agent' : self.user_agent, 'Cookie' : 'auth='+authCookie+'; exp=1' }
 
 
@@ -162,8 +172,8 @@ class firedrive:
         log('parameters: %s %s' % (id, userID))
 
         # save authorization token
-        self.auth = userID
-        self.authorization.setToken('auth',userID)
+        #self.auth = userID##*
+        self.authorization.setToken('auth_token',userID)
         return
 
 
@@ -172,7 +182,7 @@ class firedrive:
     #   returns: list containing the header
     ##
     def getHeadersList(self):
-        cookie = self.authorization.getToken('cookie')
+        cookie = self.authorization.getToken('auth_cookie')
         if (cookie != '' and cookie != 0):
             return { 'User-Agent' : self.user_agent, 'Cookie' : 'auth='+cookie+'; exp=1' }
         else:
@@ -193,7 +203,7 @@ class firedrive:
     def getVideosList(self, folderID=0, cacheType=0):
 
         # retrieve all documents
-        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.authorization.getToken('auth'), '_': 1394486104901})
+        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.authorization.getToken('auth_token'), '_': 1394486104901})
 
         url = 'http://www.firedrive.com/action/?'+ params
 
@@ -243,9 +253,9 @@ class firedrive:
 
                 if cacheType == self.CACHE_TYPE_STREAM:
                   # streaming
-                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+                  videos[title] = {'url': self.PLUGIN_URL+'?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
                 else:
-                  videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+                  videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
 
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
@@ -255,7 +265,7 @@ class firedrive:
 
                 log('found audio %s %s' % (title, filename))
 
-                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+                videos[title] = {'url': self.PLUGIN_URL+'?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'other\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
@@ -264,7 +274,7 @@ class firedrive:
 
                 log('found other %s %s' % (title, filename))
 
-                videos[title] = {'url': 'plugin://plugin.video.firedrive?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+                videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
 
 
             response.close()
@@ -280,7 +290,7 @@ class firedrive:
     def getFolderList(self, folderID=0):
 
         # retrieve all documents
-        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.authorization.getToken('auth'), '_': 1394486104901})
+        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.authorization.getToken('auth_token'), '_': 1394486104901})
 
         url = 'http://www.firedrive.com/action/?'+ params
 
@@ -325,7 +335,7 @@ class firedrive:
                 log('found folder %s %s' % (folderID, folderName))
 
                 # streaming
-                folders[folderName] = 'plugin://plugin.video.firedrive?mode=folder&instance='+self.instanceName+'&folderID=' + folderID
+                folders[folderName] = self.PLUGIN_URL+'?mode=folder&instance='+self.instanceName+'&folderID=' + folderID
 
             response.close()
 
@@ -341,7 +351,7 @@ class firedrive:
     def getFolderIDList(self, folderID=0):
 
         # retrieve all documents
-        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.authorization.getToken('auth'), '_': 1394486104901})
+        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.authorization.getToken('auth_token'), '_': 1394486104901})
 
         url = 'http://www.firedrive.com/action/?'+ params
 
@@ -463,54 +473,7 @@ class firedrive:
         return playbackURL
 
 
-    ##
-    # retrieve a video link
-    #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
-    #   returns: list of URLs for the video or single URL of video (if not prompting for quality)
-    ##
-    def getVideoLinkDNU(self,filename,cacheType=0):
 
-
-        # search by video title
-        params = urllib.urlencode({'file_id': filename, 'group_id': 0, 'page': 1, 'total':7, 'index':0, 'all':'false','user_token': self.authorization.getToken('auth'), '_': 1394486104901})
-        url = 'http://www.firedrive.com/view_media/?'+params
-
-
-        log('url = %s header = %s' % (url, self.getHeadersList()))
-        req = urllib2.Request(url, None, self.getHeadersList())
-
-
-        # if action fails, validate login
-        try:
-            response = urllib2.urlopen(req)
-        except urllib2.URLError, e:
-            if e.code == 403 or e.code == 401:
-              self.login()
-              req = urllib2.Request(url, None, self.getHeadersList())
-              try:
-                response = urllib2.urlopen(req)
-              except urllib2.URLError, e:
-                log(str(e), True)
-                return
-            else:
-              log(str(e), True)
-              return
-
-        response_data = response.read()
-
-        playbackURL = 0
-        # fetch video title, download URL and docid for stream link
-        for r in re.finditer('\{\"id"\:\"([^\"]+)\"\,\"title\"\:\"([^\"]+)\"\,.*?\"down\"\:\"([^\"]+)\"[^\}]+\}' ,response_data, re.DOTALL):
-             fileID,fileTitle,fileURL = r.groups()
-             if fileID == filename:
-                 log('found video %s %s %s' % (fileID, fileURL, fileTitle))
-                 fileURL = re.sub('\\\\', '', fileURL)
-                 playbackURL = fileURL
-
-
-        response.close()
-
-        return playbackURL
     ##
     # retrieve a video link
     #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
@@ -617,7 +580,7 @@ class firedrive:
         xbmcvfs.mkdir(path)
 
         # retrieve all documents
-        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.authorization.getToken('auth'), '_': 1394486104901})
+        params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.authorization.getToken('auth_token'), '_': 1394486104901})
 
         url = 'http://www.firedrive.com/action/?'+ params
 
@@ -673,7 +636,7 @@ class firedrive:
 #                  strmFile.write('plugin://plugin.video.firedrive?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title+'\n')
 #                else:
 
-                strmFile.write('plugin://plugin.video.firedrive?mode=streamURL&url=' + self.FILE_URL+ fileID+'\n')
+                strmFile.write(self.PLUGIN_URL+'?mode=streamURL&url=' + self.FILE_URL+ fileID+'\n')
 
                 strmFile.close()
 
@@ -688,7 +651,7 @@ class firedrive:
                 filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
                 strmFile = open(filename, "w")
 
-                strmFile.write('plugin://plugin.video.firedrive?mode=streamURL&url=' + self.FILE_URL+ fileID+'\n')
+                strmFile.write(self.PLUGIN_URL+'?mode=streamURL&url=' + self.FILE_URL+ fileID+'\n')
                 strmFile.close()
 
 
@@ -702,7 +665,7 @@ class firedrive:
                 filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
                 strmFile = open(filename, "w")
 
-                strmFile.write('plugin://plugin.video.firedrive?mode=streamURL&url=' + self.FILE_URL+ fileID+'\n')
+                strmFile.write(self.PLUGIN_URL+'?mode=streamURL&url=' + self.FILE_URL+ fileID+'\n')
                 strmFile.close()
 
             response.close()
