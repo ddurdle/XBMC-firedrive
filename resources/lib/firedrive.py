@@ -23,6 +23,7 @@ import re
 import urllib, urllib2
 from resources.lib import authorization
 from resources.lib import account
+from cloudservice import cloudservice
 
 
 
@@ -42,7 +43,7 @@ def log(msg, err=False):
 #
 #
 #
-class firedrive:
+class firedrive(cloudservice):
 
     CACHE_TYPE_MEMORY = 0
     CACHE_TYPE_DISK = 1
@@ -79,14 +80,6 @@ class firedrive:
           log('no token - logging in')
           self.login();
           return
-
-    ##
-    # if we don't have an authorization token set for the plugin, set it with the recent login.
-    #   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
-    ##
-    def updateAuthorization(self,addon):
-        if self.authorization.isUpdated and addon.getSetting(instanceName+'_save_auth_token') == 'true':
-            self.authorization.saveTokens(self.instanceName,addon)
 
 
 
@@ -188,12 +181,6 @@ class firedrive:
         else:
             return { 'User-Agent' : self.user_agent }
 
-    ##
-    # return the appropriate "headers" for FireDrive requests that include 1) user agent, 2) authorization cookie
-    #   returns: URL-encoded header string
-    ##
-    def getHeadersEncoded(self):
-        return urllib.urlencode(self.getHeadersList())
 
     ##
     # retrieve a list of videos, using playback type stream

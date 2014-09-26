@@ -19,6 +19,8 @@
 from resources.lib import firedrive
 from resources.lib import gPlayer
 from resources.lib import tvWindow
+from resources.lib import cloudservice
+
 
 import sys
 import urllib
@@ -55,7 +57,7 @@ def addVideo(url, infolabels, label, img='', fanart='', total_items=0,
     cm=[]
     cleanURL = re.sub('---', '', url)
     cleanURL = re.sub('&', '---', cleanURL)
-    cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin(plugin://plugin.video.firedrive?mode=buildstrm&title='+infolabels['title']+'&streamurl='+cleanURL+')', ))
+    cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=buildstrm&title='+infolabels['title']+'&streamurl='+cleanURL+')', ))
 #    listitem.addContextMenuItems( commands )
     if cm:
         listitem.addContextMenuItems(cm, cm_replace)
@@ -70,7 +72,7 @@ def addDirectory(url, title, img='', fanart='', total_items=0, folderID='', inst
 
     if folderID != '' and 0:
         cm=[]
-        cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin(plugin://plugin.video.firedrive?mode=buildstrm&title='+title+'&instanceName='+str(instanceName)+'&folderID='+str(folderID)+')', ))
+        cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=buildstrm&title='+title+'&instanceName='+str(instanceName)+'&folderID='+str(folderID)+')', ))
         listitem.addContextMenuItems(cm, False)
 
     listitem.setProperty('fanart_image', fanart)
@@ -189,7 +191,7 @@ if mode == 'main' or mode == 'folder':
             try:
                 username = addon.getSetting(instanceName+'_username')
                 if username != '':
-                    addDirectory('plugin://plugin.video.firedrive?mode=main&instance='+instanceName,username)
+                    addDirectory(PLUGIN_URL+'?mode=main&instance='+instanceName,username)
             except:
                 break
             if count == max_count:
@@ -693,8 +695,8 @@ elif mode == 'clearauth':
     xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30023))
 
 if mode == 'options' or mode == 'buildstrm' or mode == 'clearauth':
-    addDirectory('plugin://plugin.video.firedrive?mode=clearauth','<<'+addon.getLocalizedString(30018)+'>>')
-    addDirectory('plugin://plugin.video.firedrive?mode=buildstrm','<<'+addon.getLocalizedString(30025)+'>>')
+    addDirectory(PLUGIN_URL+'?mode=clearauth','<<'+addon.getLocalizedString(30018)+'>>')
+    addDirectory(PLUGIN_URL+'?mode=buildstrm','<<'+addon.getLocalizedString(30025)+'>>')
 
 
 
