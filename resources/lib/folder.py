@@ -20,22 +20,13 @@
 #
 #
 #
-class account:
+class folder:
 
     ##
     ##
-    def __init__(self, instanceName, username, password):
-        self.instanceName = instanceName
-        self.username = username
-        self.password = password
+    def __init__(self, id, title, url):
+        self.id = id
+        self.title = title
+        self.url = url
 
-
-    ##
-    # returns whether the account has credentials (username and password) provided
-    ##
-    def hasCredentials(self):
-        if self.username != '' and self.password != '':
-            return True
-        else:
-            return False
 

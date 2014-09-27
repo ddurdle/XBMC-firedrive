@@ -277,7 +277,7 @@ if mode == 'main' or mode == 'folder':
 
         firedrive.updateAuthorization(addon)
 
-#play a URL that is passed in (presumely requires authorizated session)
+# under development
 elif mode == 'play2':
     try:
       url = plugin_queries['url']
@@ -449,9 +449,6 @@ elif mode == 'streamaudio' or mode == 'playaudio':
     firedrive.updateAuthorization(addon)
 
 
-
-
-
 elif mode == 'streamurl' or mode == 'play':
     try:
       url = plugin_queries['url']
@@ -465,7 +462,6 @@ elif mode == 'streamurl' or mode == 'play':
 
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
-
     except :
         pass
 
@@ -483,7 +479,6 @@ elif mode == 'streamurl' or mode == 'play':
 
 #create strm files
 elif mode == 'buildstrm':
-
 
     try:
         path = addon.getSetting('path')

@@ -22,7 +22,6 @@ import os
 import re
 import urllib, urllib2
 from resources.lib import authorization
-from resources.lib import account
 from cloudservice import cloudservice
 
 
@@ -40,8 +39,8 @@ class firedrive(cloudservice):
     CACHE_TYPE_DISK = 1
     CACHE_TYPE_STREAM = 2
     FILE_URL = 'http://www.firedrive.com/file/'
+    DOWNLOAD_LINK = 'http://dl.firedrive.com/?alias='
 
-    API_VERSION = '3.0'
     ##
     # initialize (setting authorization token, 4) user agent string
     ##
@@ -380,7 +379,7 @@ class firedrive(cloudservice):
     ##
     def getAudioLink(self,filename):
 
-        return 'http://dl.firedrive.com/?alias='+filename+'&key' + '|'+self.getHeadersEncoded()
+        return DOWNLOAD_LINK+filename+'&key' + '|'+self.getHeadersEncoded()
 
 
 
@@ -393,9 +392,9 @@ class firedrive(cloudservice):
 
         #user requested SD quality
         if cacheType == self.CACHE_TYPE_STREAM and videoQuality == True:
-            return 'http://dl.firedrive.com/?alias='+filename+'&stream' + '|'+self.getHeadersEncoded()
+            return DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
         elif cacheType != self.CACHE_TYPE_STREAM:
-            return 'http://dl.firedrive.com/?alias='+filename+ '|'+self.getHeadersEncoded()
+            return DOWNLOAD_LINK+filename+ '|'+self.getHeadersEncoded()
 
 
         url = 'http://www.firedrive.com/file/'+filename
@@ -432,12 +431,12 @@ class firedrive(cloudservice):
                   return
                 response_data = response.read()
 
-        playbackURL = playbackURL = 'http://dl.firedrive.com/?alias='+filename+'&stream' + '|'+self.getHeadersEncoded()
+        playbackURL = DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
         # fetch video title, download URL and docid for stream link
         for r in re.finditer('(label)\: \"([^\"]+)\"' ,response_data, re.DOTALL):
              streamLabel,streamType = r.groups()
              if streamType == 'HD':
-                 playbackURL = 'http://dl.firedrive.com/?alias='+filename+'&hd' + '|'+self.getHeadersEncoded()
+                 playbackURL = DOWNLOAD_LINK+filename+'&hd' + '|'+self.getHeadersEncoded()
 
         response.close()
 
