@@ -25,8 +25,9 @@ class authorization:
 
     ##
     ##
-    def __init__(self):
+    def __init__(self,username):
         self.auth = {}
+        self.username = username
         self.isUpdated = False
 
     ##

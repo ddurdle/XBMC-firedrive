@@ -29,15 +29,6 @@ from cloudservice import cloudservice
 
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin
 
-# global variables
-addon = xbmcaddon.Addon(id='plugin.video.firedrive')
-
-# helper methods
-def log(msg, err=False):
-    if err:
-        xbmc.log(addon.getAddonInfo('name') + ': ' + msg, xbmc.LOGERROR)
-    else:
-        xbmc.log(addon.getAddonInfo('name') + ': ' + msg, xbmc.LOGDEBUG)
 
 
 #
@@ -52,32 +43,41 @@ class firedrive(cloudservice):
 
     API_VERSION = '3.0'
     ##
-    # initialize (setting 1) username, 2) password, 3) authorization token, 4) user agent string
+    # initialize (setting authorization token, 4) user agent string
     ##
-    def __init__(self, PLUGIN_URL, instanceName, username, password, auth, cookie, user_agent):
+    def __init__(self, PLUGIN_URL, addon, instanceName, user_agent):
         self.PLUGIN_URL = PLUGIN_URL
-        self.account = account.account(instanceName,username,password)
+        self.addon = addon
         self.instanceName = instanceName
-#        self.username = username##*
-#        self.password = password##*
-        self.authorization = authorization.authorization()
+
+        try:
+            username = self.addon.getSetting(instanceName+'_username')
+        except:
+            username = ''
+        self.authorization = authorization.authorization(username)
+
+
+        try:
+            auth = self.addon.getSetting(instanceName+'_auth_token')
+            cookie = self.addon.getSetting(instanceName+'_auth_cookie')
+        except:
+            auth = ''
+            cookie = ''
+
         self.authorization.setToken('auth_token',auth)
         self.authorization.setToken('auth_cookie',cookie)
-#        self.auth = auth##*
-#        self.cookie = cookie
         self.user_agent = user_agent
 
         #public playback only -- no authentication
-        if self.account.username == '':
+        if self.authorization.username == '':
             return
 
         # if we have an authorization token set, try to use it
         if auth != '':
-          log('using token')
-
+          xbmc.log(self.addon.getAddonInfo('name') + ': ' + 'using token', xbmc.LOGDEBUG)
           return
         else:
-          log('no token - logging in')
+          xbmc.log(self.addon.getAddonInfo('name') + ': ' + 'no token - logging in', xbmc.LOGDEBUG)
           self.login();
           return
 
@@ -94,15 +94,14 @@ class firedrive(cloudservice):
         url = 'http://auth.firedrive.com/'
 
         values = {
-                  'pass' : self.account.password,
-                  'user' : self.account.username,
+                  'pass' : self.addon.getSetting(instanceName+'_password'),
+                  'user' : self.authorization.username,
                   'remember' : 1,
                   'json' : 1,
                   'user_token' : '',
         }
 
-        log('logging in')
-
+        xbmc.log(self.addon.getAddonInfo('name') + ': ' + 'logging in', xbmc.LOGDEBUG)
         req = urllib2.Request(url, urllib.urlencode(values), header)
 
         # try login
@@ -111,8 +110,8 @@ class firedrive(cloudservice):
         except urllib2.URLError, e:
             if e.code == 403:
                 #login denied
-                xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30017))
-            log(str(e), True)
+                xbmcgui.Dialog().ok(self.addon.getLocalizedString(30000), self.addon.getLocalizedString(30017))
+            xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
             return
         response_header = response.info().getheader('Set-Cookie')
         response_data = response.read()
@@ -134,8 +133,9 @@ class firedrive(cloudservice):
             statusType,statusResult = r.groups()
 
         if (statusResult == 0):
-            xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30017))
-            log('login failed', True)
+            xbmcgui.Dialog().ok(self.addon.getLocalizedString(30000), self.addon.getLocalizedString(30017))
+            xbmc.log(self.addon.getAddonInfo('name') + ': ' + 'login failed', xbmc.LOGERROR)
+
             return
 
         url = 'http://www.firedrive.com/myfiles'
@@ -146,7 +146,7 @@ class firedrive(cloudservice):
         try:
             response = urllib2.urlopen(req)
         except urllib2.URLError, e:
-            log(str(e), True)
+            xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
             return
 
         response_data = response.read()
@@ -158,14 +158,11 @@ class firedrive(cloudservice):
             id,userID = r.groups()
 
         if userID == 0 :
-            xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30017))
-            log('login failed', True)
+            xbmcgui.Dialog().ok(self.addon.getLocalizedString(30000), self.ddon.getLocalizedString(30017))
+            xbmc.log(self.addon.getAddonInfo('name') + ': ' + 'login failed', xbmc.LOGERROR)
             return
 
-        log('parameters: %s %s' % (id, userID))
-
         # save authorization token
-        #self.auth = userID##*
         self.authorization.setToken('auth_token',userID)
         return
 
@@ -196,7 +193,6 @@ class firedrive(cloudservice):
 
         videos = {}
         if True:
-            log('url = %s header = %s' % (url, self.getHeadersList()))
             req = urllib2.Request(url, None, self.getHeadersList())
 
             # if action fails, validate login
@@ -209,10 +205,11 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
+
                   return
               else:
-                log(str(e), True)
+                xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                 return
 
             response_data = response.read()
@@ -224,7 +221,7 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                   return
                 response_data = response.read()
 
@@ -235,8 +232,6 @@ class firedrive(cloudservice):
                 img = re.sub('\\\\', '', img)
                 img = 'http://static.firedrive.com/'+img
 
-
-                log('found video %s %s' % (title, filename))
 
                 if cacheType == self.CACHE_TYPE_STREAM:
                   # streaming
@@ -250,16 +245,12 @@ class firedrive(cloudservice):
                 img = re.sub('\\\\', '', img)
                 img = 'http://static.firedrive.com/'+img
 
-                log('found audio %s %s' % (title, filename))
-
                 videos[title] = {'url': self.PLUGIN_URL+'?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'other\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
                 img = re.sub('\\\\', '', img)
                 img = 'http://static.firedrive.com/'+img
-
-                log('found other %s %s' % (title, filename))
 
                 videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
 
@@ -283,7 +274,6 @@ class firedrive(cloudservice):
 
         folders = {}
         if True:
-            log('url = %s header = %s' % (url, self.getHeadersList()))
             req = urllib2.Request(url, None, self.getHeadersList())
 
             # if action fails, validate login
@@ -296,10 +286,10 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                   return
               else:
-                log(str(e), True)
+                xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                 return
 
             response_data = response.read()
@@ -311,15 +301,13 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                   return
                 response_data = response.read()
 
             # parsing page for folders
             for r in re.finditer('"f_id":"([^\"]+)".*?"f_fullname":"([^\"]+)"' ,response_data, re.DOTALL):
                 folderID, folderName = r.groups()
-
-                log('found folder %s %s' % (folderID, folderName))
 
                 # streaming
                 folders[folderName] = self.PLUGIN_URL+'?mode=folder&instance='+self.instanceName+'&folderID=' + folderID
@@ -344,7 +332,6 @@ class firedrive(cloudservice):
 
         folders = {}
         if True:
-            log('url = %s header = %s' % (url, self.getHeadersList()))
             req = urllib2.Request(url, None, self.getHeadersList())
 
             # if action fails, validate login
@@ -357,10 +344,10 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                   return
               else:
-                log(str(e), True)
+                xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                 return
 
             response_data = response.read()
@@ -372,15 +359,13 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                   return
                 response_data = response.read()
 
             # parsing page for folders
             for r in re.finditer('"f_id":"([^\"]+)".*?"f_fullname":"([^\"]+)"' ,response_data, re.DOTALL):
                 folderID, folderName = r.groups()
-
-                log('found folder %s %s' % (folderID, folderName))
 
                 # streaming
                 folders[folderName] =  folderID
@@ -415,7 +400,6 @@ class firedrive(cloudservice):
 
         url = 'http://www.firedrive.com/file/'+filename
 
-        log('url = %s header = %s' % (url, self.getHeadersList()))
         req = urllib2.Request(url, None, self.getHeadersList())
 
 
@@ -429,10 +413,10 @@ class firedrive(cloudservice):
               try:
                 response = urllib2.urlopen(req)
               except urllib2.URLError, e:
-                log(str(e), True)
+                xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                 return
             else:
-              log(str(e), True)
+              xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
               return
 
         response_data = response.read()
@@ -444,7 +428,7 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                   return
                 response_data = response.read()
 
@@ -469,7 +453,6 @@ class firedrive(cloudservice):
     def getPublicLink(self,url,cacheType=0):
 
 
-        log('url = %s header = %s' % (url, self.getHeadersList()))
         req = urllib2.Request(url, None, self.getHeadersList())
 
 
@@ -483,10 +466,10 @@ class firedrive(cloudservice):
               try:
                 response = urllib2.urlopen(req)
               except urllib2.URLError, e:
-                log(str(e), True)
+                xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                 return
             else:
-              log(str(e), True)
+              xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
               return
 
         response_data = response.read()
@@ -498,7 +481,7 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                   return
                 response_data = response.read()
 
@@ -529,10 +512,10 @@ class firedrive(cloudservice):
                         try:
                             response = urllib2.urlopen(req)
                         except urllib2.URLError, e:
-                            log(str(e), True)
+                            xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                             return
               else:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
               return
 
             response_data = response.read()
@@ -573,7 +556,6 @@ class firedrive(cloudservice):
 
         videos = {}
         if True:
-            log('url = %s header = %s' % (url, self.getHeadersList()))
             req = urllib2.Request(url, None, self.getHeadersList())
 
             # if action fails, validate login
@@ -586,10 +568,10 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                   return
               else:
-                log(str(e), True)
+                xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                 return
 
             response_data = response.read()
@@ -601,7 +583,7 @@ class firedrive(cloudservice):
                 try:
                   response = urllib2.urlopen(req)
                 except urllib2.URLError, e:
-                  log(str(e), True)
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
                   return
                 response_data = response.read()
 
@@ -612,8 +594,6 @@ class firedrive(cloudservice):
                 img = re.sub('\\\\', '', img)
                 img = 'http://static.firedrive.com/'+img
 
-
-                log('found video %s %s' % (title, filename))
 
                 filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
                 strmFile = open(filename, "w")
@@ -633,8 +613,6 @@ class firedrive(cloudservice):
                 img = re.sub('\\\\', '', img)
                 img = 'http://static.firedrive.com/'+img
 
-                log('found audio %s %s' % (title, filename))
-
                 filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
                 strmFile = open(filename, "w")
 
@@ -647,8 +625,6 @@ class firedrive(cloudservice):
                 img = re.sub('\\\\', '', img)
                 img = 'http://static.firedrive.com/'+img
 
-                log('found other %s %s' % (title, filename))
-
                 filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
                 strmFile = open(filename, "w")
 
@@ -656,5 +632,4 @@ class firedrive(cloudservice):
                 strmFile.close()
 
             response.close()
-
 

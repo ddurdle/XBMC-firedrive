@@ -56,3 +56,11 @@ class cloudservice(object):
     ##
     def getHeadersEncoded(self):
         return urllib.urlencode(self.getHeadersList())
+
+    # helper methods
+    def log(msg, err=False):
+        if err:
+            xbmc.log(self.addon.getAddonInfo('name') + ': ' + msg, xbmc.LOGERROR)
+        else:
+            xbmc.log(self.addon.getAddonInfo('name') + ': ' + msg, xbmc.LOGDEBUG)
+
