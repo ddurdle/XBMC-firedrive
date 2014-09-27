@@ -30,3 +30,13 @@ class folder:
         self.url = url
 
 
+    def __repr__(self):
+        return '{}: {} {}'.format(self.__class__.__name__,
+                                  self.title)
+
+    def __cmp__(self, other):
+        if hasattr(other, 'title'):
+            return self.title.__cmp__(other.title)
+
+    def getKey(self):
+        return self.title

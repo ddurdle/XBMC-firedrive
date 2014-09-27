@@ -20,6 +20,8 @@ from resources.lib import firedrive
 from resources.lib import gPlayer
 from resources.lib import tvWindow
 from resources.lib import cloudservice
+from resources.lib import folder
+from resources.lib import file
 
 
 import sys
@@ -47,7 +49,7 @@ def parse_query(query):
     q['mode'] = q.get('mode', 'main')
     return q
 
-def addVideo(url, infolabels, label, img='', fanart='', total_items=0,
+def addMediaFile(url, infolabels, label, img='', fanart='', total_items=0,
                    cm=[], cm_replace=False):
     infolabels = decode_dict(infolabels)
     log('adding video: %s - %s' % (infolabels['title'], url))
@@ -163,7 +165,6 @@ if mode == 'main':
 
 #dump a list of videos available to play
 if mode == 'main' or mode == 'folder':
-    log(mode)
 
     folderID=0
     if (mode == 'folder'):
@@ -261,19 +262,19 @@ if mode == 'main' or mode == 'folder':
 
 
 
-        videos = firedrive.getVideosList(folderID,cacheType)
-
+        videos = firedrive.getMediaList(folderID,cacheType)
         folders = firedrive.getFolderList(folderID)
-        if folders:
-            for title in sorted(folders.iterkeys()):
-                addDirectory(folders[title],title,folderID=folderID,instanceName=firedrive.instanceName)
 
-#        videos = firedrive.getVideosList(folderID)
+        if folders:
+            for folder in sorted(folders, key=lambda item: item.title):
+                addDirectory(folder.url, folder.title, folderID=folder.id, instanceName=firedrive.instanceName)
+
         if videos:
-            for title in sorted(videos.iterkeys()):
-                addVideo(videos[title]['url'],
-                             { 'title' : title , 'plot' : title }, title,
-                             img=videos[title]['thumbnail'])
+            for media in sorted(videos, key=lambda item: item.title):
+                addMediaFile(media.url,
+                             { 'title' : media.title , 'plot' : media.plot }, media.title,
+                             img=media.thumbnail)
+
 
         firedrive.updateAuthorization(addon)
 
@@ -291,9 +292,9 @@ elif mode == 'play2':
 
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
-
     except :
-            pass
+        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
+
 
 
     episodes = []
@@ -332,6 +333,8 @@ elif mode == 'play2':
 
 #play a video given its exact-title
 elif mode == 'playvideo':
+
+    #filename is required
     filename = plugin_queries['filename']
 
     # no need to select stream type
@@ -351,7 +354,7 @@ elif mode == 'playvideo':
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
 
     except :
-        pass
+        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
 
     videoURL = firedrive.getVideoLink(filename,0,False)
 
@@ -366,6 +369,8 @@ elif mode == 'playvideo':
 
 #force stream - play a video given its exact-title
 elif mode == 'streamvideo':
+
+    #filename is required
     try:
       filename = plugin_queries['filename']
     except:
@@ -376,20 +381,20 @@ elif mode == 'streamvideo':
     except:
       title = filename
 
-
-    force_sd = addon.getSetting('force_sd')
-
-    if force_sd == 'true':
-        force_sd = True
-    else:
+    try:
+        force_sd = addon.getSetting('force_sd')
+        if force_sd == 'true':
+            force_sd = True
+        else:
+            force_sd = False
+    except:
         force_sd = False
 
     try:
-        quality = plugin_queries['quality']
-        if (quality == 'SD'):
+        if (plugin_queries['quality'] == 'SD'):
             force_sd = True
     except :
-        pass
+        force_sd = False
 
     try:
       instanceName = plugin_queries['instance']
@@ -399,7 +404,7 @@ elif mode == 'streamvideo':
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
     except :
-        pass
+        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
 
     # immediately play resulting (is a video)
     videoURL = firedrive.getVideoLink(filename, firedrive.CACHE_TYPE_STREAM, force_sd)
@@ -434,9 +439,8 @@ elif mode == 'streamaudio' or mode == 'playaudio':
 
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
-
     except :
-        pass
+        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
 
     # immediately play resulting (is a video)
     videoURL = firedrive.getAudioLink(filename)
@@ -463,7 +467,7 @@ elif mode == 'streamurl' or mode == 'play':
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
     except :
-        pass
+        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
 
     # immediately play resulting (is a video)
     (title,videoURL) = firedrive.getPublicLink(url)
@@ -553,10 +557,10 @@ elif mode == 'buildstrm':
                             savePublic = True
                             firedrive.buildSTRM(path+username,0,savePublic)
 
-                            folders = firedrive.getFolderIDList(0)
+                            folders = firedrive.getFolderList(0)
                             if folders:
-                                for title in folders.iterkeys():
-                                    firedrive.buildSTRM(path+username+'/'+title + '/',folders[title],savePublic)
+                                for folder in folders:
+                                    firedrive.buildSTRM(path+username+'/'+folder.title + '/',folder.id,savePublic)
 
                     except:
                         break
@@ -568,19 +572,26 @@ elif mode == 'buildstrm':
         xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30028))
 
 
-#clear the authorization token
+#clear the authorization token(s) from the identified instanceName or all instances
 elif mode == 'clearauth':
 
-    instanceName = ''
     try:
         instanceName = plugin_queries['instance']
     except:
-        pass
+        instanceName = ''
 
-    numberOfAccounts = numberOfAccounts(PLUGIN_NAME)
+    if instanceName != '':
+
+        try:
+            addon.setSetting(instanceName + '_auth_token', '')
+            addon.setSetting(instanceName + '_auth_cookie', '')
+            xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30023))
+        except:
+            #error: instance doesn't exist
+            pass
 
     # clear all accounts
-    if numberOfAccounts >= 1 and instanceName == '':
+    else:
         count = 1
         max_count = int(addon.getSetting(PLUGIN_NAME+'_numaccounts'))
         while True:
@@ -593,16 +604,7 @@ elif mode == 'clearauth':
             if count == max_count:
                 break
             count = count + 1
-
-    elif instanceName != '':
-
-            try:
-                addon.setSetting(instanceName + '_auth_token', '')
-                addon.setSetting(instanceName + '_auth_cookie', '')
-            except:
-                pass
-
-    xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30023))
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30023))
 
 if mode == 'options' or mode == 'buildstrm' or mode == 'clearauth':
     addDirectory(PLUGIN_URL+'?mode=clearauth','<<'+addon.getLocalizedString(30018)+'>>')

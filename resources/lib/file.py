@@ -24,13 +24,24 @@ class file:
 
     ##
     ##
-    def __init__(self, id, title, plot, type, url):
+    def __init__(self, id, title, plot, type, fanart,thumbnail, url):
         self.id = id
         self.title = title
         self.plot = plot
         self.type = type
+        self.fanart = fanart
+        self.thumbnail = thumbnail
         self.url = url
 
 
+    def __repr__(self):
+        return '{}: {} {}'.format(self.__class__.__name__,
+                                  self.title)
 
+    def __cmp__(self, other):
+        if hasattr(other, 'title'):
+            return self.title.__cmp__(other.title)
+
+    def getKey(self):
+        return self.title
 

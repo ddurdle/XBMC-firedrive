@@ -23,6 +23,9 @@ import re
 import urllib, urllib2
 from resources.lib import authorization
 from cloudservice import cloudservice
+from resources.lib import folder
+from resources.lib import file
+
 
 
 
@@ -179,18 +182,18 @@ class firedrive(cloudservice):
 
 
     ##
-    # retrieve a list of videos, using playback type stream
+    # retrieve a list of media files
     #   parameters: prompt for video quality (optional), cache type (optional)
-    #   returns: list of videos
+    #   returns: array of media file objects
     ##
-    def getVideosList(self, folderID=0, cacheType=0):
+    def getMediaList(self, folderID=0, cacheType=0):
 
         # retrieve all documents
         params = urllib.urlencode({'getFiles': folderID, 'format': 'large', 'term': '', 'group':0, 'limit':1, 'user_token': self.authorization.getToken('auth_token'), '_': 1394486104901})
 
         url = 'http://www.firedrive.com/action/?'+ params
 
-        videos = {}
+        videos = []
         if True:
             req = urllib2.Request(url, None, self.getHeadersList())
 
@@ -234,9 +237,11 @@ class firedrive(cloudservice):
 
                 if cacheType == self.CACHE_TYPE_STREAM:
                   # streaming
-                  videos[title] = {'url': self.PLUGIN_URL+'?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+#                  videos[title] = {'url': self.PLUGIN_URL+'?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+                    videos.append(file.file(fileID, title, title, '', '', img, self.PLUGIN_URL+'?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title))
                 else:
-                  videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+#                  videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+                    videos.append(file.file(fileID, title, title, '', '', img, self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title))
 
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
@@ -244,15 +249,16 @@ class firedrive(cloudservice):
                 img = re.sub('\\\\', '', img)
                 img = 'http://static.firedrive.com/'+img
 
-                videos[title] = {'url': self.PLUGIN_URL+'?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+#                videos[title] = {'url': self.PLUGIN_URL+'?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+                videos.append(file.file(fileID, title, title, '', '', img, self.PLUGIN_URL+'?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title))
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'other\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
                 img = re.sub('\\\\', '', img)
                 img = 'http://static.firedrive.com/'+img
 
-                videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
-
+#                videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
+                videos.append(file.file(fileID, title, title, '', '', img, self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title))
 
             response.close()
 
@@ -262,7 +268,7 @@ class firedrive(cloudservice):
     ##
     # retrieve a list of folders
     #   parameters: folder is the current folderID
-    #   returns: list of videos
+    #   returns: array of folder objects
     ##
     def getFolderList(self, folderID=0):
 
@@ -271,7 +277,7 @@ class firedrive(cloudservice):
 
         url = 'http://www.firedrive.com/action/?'+ params
 
-        folders = {}
+        folders = []
         if True:
             req = urllib2.Request(url, None, self.getHeadersList())
 
@@ -308,8 +314,8 @@ class firedrive(cloudservice):
             for r in re.finditer('"f_id":"([^\"]+)".*?"f_fullname":"([^\"]+)"' ,response_data, re.DOTALL):
                 folderID, folderName = r.groups()
 
-                # streaming
-                folders[folderName] = self.PLUGIN_URL+'?mode=folder&instance='+self.instanceName+'&folderID=' + folderID
+                folders.append(folder.folder(folderID,folderName,self.PLUGIN_URL+'?mode=folder&instance='+self.instanceName+'&folderID=' + folderID))
+#                folders[folderName] = self.PLUGIN_URL+'?mode=folder&instance='+self.instanceName+'&folderID=' + folderID
 
             response.close()
 
@@ -317,61 +323,6 @@ class firedrive(cloudservice):
 
 
 
-    ##
-    # retrieve a list of folders
-    #   parameters: folder is the current folderID
-    #   returns: list of videos
-    ##
-    def getFolderIDList(self, folderID=0):
-
-        # retrieve all documents
-        params = urllib.urlencode({'getFolders': folderID, 'format': 'large', 'term': '', 'group':0, 'user_token': self.authorization.getToken('auth_token'), '_': 1394486104901})
-
-        url = 'http://www.firedrive.com/action/?'+ params
-
-        folders = {}
-        if True:
-            req = urllib2.Request(url, None, self.getHeadersList())
-
-            # if action fails, validate login
-            try:
-              response = urllib2.urlopen(req)
-            except urllib2.URLError, e:
-              if e.code == 403 or e.code == 401:
-                self.login()
-                req = urllib2.Request(url, None, self.getHeadersList())
-                try:
-                  response = urllib2.urlopen(req)
-                except urllib2.URLError, e:
-                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
-                  return
-              else:
-                xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
-                return
-
-            response_data = response.read()
-
-            #if authorization cookie is broken, response will be empty, so log in again
-            if response_data == '':
-                self.login()
-                req = urllib2.Request(url, None, self.getHeadersList())
-                try:
-                  response = urllib2.urlopen(req)
-                except urllib2.URLError, e:
-                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
-                  return
-                response_data = response.read()
-
-            # parsing page for folders
-            for r in re.finditer('"f_id":"([^\"]+)".*?"f_fullname":"([^\"]+)"' ,response_data, re.DOTALL):
-                folderID, folderName = r.groups()
-
-                # streaming
-                folders[folderName] =  folderID
-
-            response.close()
-
-        return folders
     ##
     # retrieve a audio link
     #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
