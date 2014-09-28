@@ -235,14 +235,7 @@ class firedrive(cloudservice):
                 img = 'http://static.firedrive.com/'+img
 
 
-                if cacheType == self.CACHE_TYPE_STREAM:
-                  # streaming
-#                  videos[title] = {'url': self.PLUGIN_URL+'?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
-                    videos.append(file.file(fileID, title, title, '', '', img, self.PLUGIN_URL+'?mode=streamVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title))
-                else:
-#                  videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
-                    videos.append(file.file(fileID, title, title, '', '', img, self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title))
-
+                videos.append(file.file(fileID, title, title, '', '', img))
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
@@ -250,7 +243,7 @@ class firedrive(cloudservice):
                 img = 'http://static.firedrive.com/'+img
 
 #                videos[title] = {'url': self.PLUGIN_URL+'?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
-                videos.append(file.file(fileID, title, title, '', '', img, self.PLUGIN_URL+'?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title))
+                videos.append(file.file(fileID, title, title, '', '', img))
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'other\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
@@ -258,11 +251,25 @@ class firedrive(cloudservice):
                 img = 'http://static.firedrive.com/'+img
 
 #                videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
-                videos.append(file.file(fileID, title, title, '', '', img, self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title))
+                videos.append(file.file(fileID, title, title, '', '', img))
 
             response.close()
 
         return videos
+
+    ##
+    # retrieve a playback url
+    #   returns: url
+    ##
+    def getPlaybackCall(self, file):
+        return self.PLUGIN_URL+'?mode=play&instance='+self.instanceName+'&filename=' + file.id+'&title=' + file.title
+
+    ##
+    # retrieve a directory url
+    #   returns: url
+    ##
+    def getDirectoryCall(self, folder):
+        return self.PLUGIN_URL+'?mode=folder&instance='+self.instanceName+'&folderID=' + folder.id
 
 
     ##
@@ -314,7 +321,7 @@ class firedrive(cloudservice):
             for r in re.finditer('"f_id":"([^\"]+)".*?"f_fullname":"([^\"]+)"' ,response_data, re.DOTALL):
                 folderID, folderName = r.groups()
 
-                folders.append(folder.folder(folderID,folderName,self.PLUGIN_URL+'?mode=folder&instance='+self.instanceName+'&folderID=' + folderID))
+                folders.append(folder.folder(folderID,folderName))
 #                folders[folderName] = self.PLUGIN_URL+'?mode=folder&instance='+self.instanceName+'&folderID=' + folderID
 
             response.close()

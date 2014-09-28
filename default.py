@@ -49,39 +49,49 @@ def parse_query(query):
     q['mode'] = q.get('mode', 'main')
     return q
 
-def addMediaFile(url, infolabels, label, img='', fanart='', total_items=0,
-                   cm=[], cm_replace=False):
-    infolabels = decode_dict(infolabels)
-    log('adding video: %s - %s' % (infolabels['title'], url))
-    listitem = xbmcgui.ListItem(label, iconImage=img,
-                                thumbnailImage=img)
+def addMediaFile(service, media):
+
+    infolabels = decode_dict({ 'title' : media.title , 'plot' : media.plot })
+    listitem = xbmcgui.ListItem(media.title, iconImage=media.thumbnail,
+                                thumbnailImage=media.thumbnail)
     listitem.setInfo('video', infolabels)
     listitem.setProperty('IsPlayable', 'true')
-    listitem.setProperty('fanart_image', fanart)
+    listitem.setProperty('fanart_image', media.fanart)
     cm=[]
+    url = service.getPlaybackCall(media)
     cleanURL = re.sub('---', '', url)
     cleanURL = re.sub('&', '---', cleanURL)
-    cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=buildstrm&title='+infolabels['title']+'&streamurl='+cleanURL+')', ))
+    cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=buildstrm&title='+media.title+'&streamurl='+cleanURL+')', ))
+    cm.append(( addon.getLocalizedString(30046), 'XBMC.PlayMedia('+url+'&quality=SD&stream=1', ))
+    cm.append(( addon.getLocalizedString(30047), 'XBMC.PlayMedia('+url+'&quality=HD&stream=1)', ))
+    cm.append(( addon.getLocalizedString(30048), 'XBMC.PlayMedia('+url+'&stream=0)', ))
+
 #    listitem.addContextMenuItems( commands )
     if cm:
-        listitem.addContextMenuItems(cm, cm_replace)
+        listitem.addContextMenuItems(cm, False)
     xbmcplugin.addDirectoryItem(plugin_handle, url, listitem,
-                                isFolder=False, totalItems=total_items)
+                                isFolder=False, totalItems=0)
 
-def addDirectory(url, title, img='', fanart='', total_items=0, folderID='', instanceName=''):
-    log('adding dir: %s - %s' % (title, url))
-    listitem = xbmcgui.ListItem(decode(title), iconImage=img, thumbnailImage=img)
-    if not fanart:
-        fanart = addon.getAddonInfo('path') + '/fanart.jpg'
+def addDirectory(service, folder):
+    listitem = xbmcgui.ListItem(decode(folder.title), iconImage='', thumbnailImage='')
+    fanart = addon.getAddonInfo('path') + '/fanart.jpg'
 
-    if folderID != '' and 0:
+    if folder.id != '':
         cm=[]
-        cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=buildstrm&title='+title+'&instanceName='+str(instanceName)+'&folderID='+str(folderID)+')', ))
+        cm.append(( addon.getLocalizedString(30042), 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=buildstrm&title='+folder.title+'&instanceName='+str(service.instanceName)+'&folderID='+str(folder.id)+')', ))
         listitem.addContextMenuItems(cm, False)
 
     listitem.setProperty('fanart_image', fanart)
+    xbmcplugin.addDirectoryItem(plugin_handle, service.getDirectoryCall(folder), listitem,
+                                isFolder=True, totalItems=0)
+
+def addMenu(url,title):
+    listitem = xbmcgui.ListItem(decode(title), iconImage='', thumbnailImage='')
+    fanart = addon.getAddonInfo('path') + '/fanart.jpg'
+
+    listitem.setProperty('fanart_image', fanart)
     xbmcplugin.addDirectoryItem(plugin_handle, url, listitem,
-                                isFolder=True, totalItems=total_items)
+                                isFolder=True, totalItems=0)
 
 #http://stackoverflow.com/questions/1208916/decoding-html-entities-with-python/1208931#1208931
 def _callback(matches):
@@ -163,7 +173,7 @@ log('plugin handle: ' + str(plugin_handle))
 
 
 if mode == 'main':
-    addDirectory(PLUGIN_URL+'?mode=options','<<'+addon.getLocalizedString(30043)+'>>')
+    addMenu(PLUGIN_URL+'?mode=options','<<'+addon.getLocalizedString(30043)+'>>')
 
 #dump a list of videos available to play
 if mode == 'main' or mode == 'folder':
@@ -173,10 +183,11 @@ if mode == 'main' or mode == 'folder':
         folderID = plugin_queries['folderID']
 
 
-    try:
-      cacheType = (int)(addon.getSetting('playback_type'))
-    except:
-      cacheType = 0
+#    try:
+#      cacheType = (int)(addon.getSetting('playback_type'))
+#    except:
+#      cacheType = 0
+
 
 
     instanceName = ''
@@ -196,7 +207,7 @@ if mode == 'main' or mode == 'folder':
             try:
                 username = addon.getSetting(instanceName+'_username')
                 if username != '':
-                    addDirectory(PLUGIN_URL+'?mode=main&instance='+instanceName,username)
+                    addMenu(PLUGIN_URL+'?mode=main&instance='+instanceName,username)
             except:
                 break
             if count == max_count:
@@ -263,19 +274,16 @@ if mode == 'main' or mode == 'folder':
 
 
 
-        videos = firedrive.getMediaList(folderID,cacheType)
+        videos = firedrive.getMediaList(folderID,0)
         folders = firedrive.getFolderList(folderID)
 
         if folders:
             for folder in sorted(folders, key=lambda item: item.title):
-                addDirectory(folder.url, folder.title, folderID=folder.id, instanceName=firedrive.instanceName)
+                addDirectory(firedrive, folder)
 
         if videos:
             for media in sorted(videos, key=lambda item: item.title):
-                addMediaFile(media.url,
-                             { 'title' : media.title , 'plot' : media.plot }, media.title,
-                             img=media.thumbnail)
-
+                addMediaFile(firedrive, media)
 
         firedrive.updateAuthorization(addon)
 
@@ -335,45 +343,8 @@ elif mode == 'play2':
 
 
 
-#play a video given its exact-title
-elif mode == 'playvideo':
-
-    #filename is required
-    filename = plugin_queries['filename']
-
-    # no need to select stream type
-
-    try:
-      title = plugin_queries['title']
-    except:
-      title = filename
-
-
-    try:
-      instanceName = plugin_queries['instance']
-    except:
-      instanceName = PLUGIN_NAME+'1'
-
-    try:
-        firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
-    except :
-        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30045))
-        log(addon.getLocalizedString(30045), True)
-        xbmcplugin.endOfDirectory(plugin_handle)
-
-    videoURL = firedrive.getVideoLink(filename,0,False)
-
-    item = xbmcgui.ListItem(path=videoURL)
-    log('play url: ' + videoURL)
-    item.setInfo( type="Video", infoLabels={ "Title": title , "Plot" : title } )
-    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
-
-    firedrive.updateAuthorization(addon)
-
-
-
 #force stream - play a video given its exact-title
-elif mode == 'streamvideo':
+elif mode == 'streamvideo'  or mode == 'playvideo' or mode == 'play':
 
     #filename is required
     try:
@@ -388,6 +359,7 @@ elif mode == 'streamvideo':
     except:
       title = filename
 
+
     try:
         force_sd = addon.getSetting('force_sd')
         if force_sd == 'true':
@@ -400,8 +372,9 @@ elif mode == 'streamvideo':
     try:
         if (plugin_queries['quality'] == 'SD'):
             force_sd = True
-    except :
-        force_sd = False
+        elif (plugin_queries['quality'] == 'HD'):
+            force_sd = False
+    except : pass
 
     try:
       instanceName = plugin_queries['instance']
@@ -466,7 +439,7 @@ elif mode == 'streamaudio' or mode == 'playaudio':
     firedrive.updateAuthorization(addon)
 
 
-elif mode == 'streamurl' or mode == 'play':
+elif mode == 'streamurl':
     try:
         url = plugin_queries['url']
     except:
@@ -615,8 +588,8 @@ elif mode == 'clearauth':
         xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30023))
 
 if mode == 'options' or mode == 'buildstrm' or mode == 'clearauth':
-    addDirectory(PLUGIN_URL+'?mode=clearauth','<<'+addon.getLocalizedString(30018)+'>>')
-    addDirectory(PLUGIN_URL+'?mode=buildstrm','<<'+addon.getLocalizedString(30025)+'>>')
+    addMenu(PLUGIN_URL+'?mode=clearauth','<<'+addon.getLocalizedString(30018)+'>>')
+    addMenu(PLUGIN_URL+'?mode=buildstrm','<<'+addon.getLocalizedString(30025)+'>>')
 
 
 

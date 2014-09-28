@@ -24,14 +24,13 @@ class file:
 
     ##
     ##
-    def __init__(self, id, title, plot, type, fanart,thumbnail, url):
+    def __init__(self, id, title, plot, type, fanart,thumbnail):
         self.id = id
         self.title = title
         self.plot = plot
         self.type = type
         self.fanart = fanart
         self.thumbnail = thumbnail
-        self.url = url
 
 
     def __repr__(self):
