@@ -45,7 +45,7 @@ class firedrive(cloudservice):
     DOWNLOAD_LINK = 'http://dl.firedrive.com/?alias='
 
     ##
-    # initialize (setting authorization token, 4) user agent string
+    # initialize (save addon, instance name, user agent)
     ##
     def __init__(self, PLUGIN_URL, addon, instanceName, user_agent):
         self.PLUGIN_URL = PLUGIN_URL
@@ -53,15 +53,15 @@ class firedrive(cloudservice):
         self.instanceName = instanceName
 
         try:
-            username = self.addon.getSetting(instanceName+'_username')
+            username = self.addon.getSetting(self.instanceName+'_username')
         except:
             username = ''
         self.authorization = authorization.authorization(username)
 
 
         try:
-            auth = self.addon.getSetting(instanceName+'_auth_token')
-            cookie = self.addon.getSetting(instanceName+'_auth_cookie')
+            auth = self.addon.getSetting(self.instanceName+'_auth_token')
+            cookie = self.addon.getSetting(self.instanceName+'_auth_cookie')
         except:
             auth = ''
             cookie = ''
@@ -96,7 +96,7 @@ class firedrive(cloudservice):
         url = 'http://auth.firedrive.com/'
 
         values = {
-                  'pass' : self.addon.getSetting(instanceName+'_password'),
+                  'pass' : self.addon.getSetting(self.instanceName+'_password'),
                   'user' : self.authorization.username,
                   'remember' : 1,
                   'json' : 1,
@@ -330,7 +330,7 @@ class firedrive(cloudservice):
     ##
     def getAudioLink(self,filename):
 
-        return DOWNLOAD_LINK+filename+'&key' + '|'+self.getHeadersEncoded()
+        return self.DOWNLOAD_LINK+filename+'&key' + '|'+self.getHeadersEncoded()
 
 
 
@@ -343,9 +343,9 @@ class firedrive(cloudservice):
 
         #user requested SD quality
         if cacheType == self.CACHE_TYPE_STREAM and videoQuality == True:
-            return DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
+            return self.DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
         elif cacheType != self.CACHE_TYPE_STREAM:
-            return DOWNLOAD_LINK+filename+ '|'+self.getHeadersEncoded()
+            return self.DOWNLOAD_LINK+filename+ '|'+self.getHeadersEncoded()
 
 
         url = 'http://www.firedrive.com/file/'+filename
@@ -382,12 +382,12 @@ class firedrive(cloudservice):
                   return
                 response_data = response.read()
 
-        playbackURL = DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
+        playbackURL = self.DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
         # fetch video title, download URL and docid for stream link
         for r in re.finditer('(label)\: \"([^\"]+)\"' ,response_data, re.DOTALL):
              streamLabel,streamType = r.groups()
              if streamType == 'HD':
-                 playbackURL = DOWNLOAD_LINK+filename+'&hd' + '|'+self.getHeadersEncoded()
+                 playbackURL = self.DOWNLOAD_LINK+filename+'&hd' + '|'+self.getHeadersEncoded()
 
         response.close()
 

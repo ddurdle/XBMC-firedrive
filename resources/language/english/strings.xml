@@ -40,5 +40,7 @@
     <string id="30041">Login Details for Account #10</string>
     <string id="30042">Generate Non-public STRM</string>
     <string id="30043">Options</string>
+    <string id="30044">Parameter is missing:</string>
+    <string id="30045">Error fetching from cloud service.</string>
 
 </strings>

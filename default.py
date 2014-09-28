@@ -160,6 +160,8 @@ log('plugin url: ' + PLUGIN_URL)
 log('plugin queries: ' + str(plugin_queries))
 log('plugin handle: ' + str(plugin_handle))
 
+
+
 if mode == 'main':
     addDirectory(PLUGIN_URL+'?mode=options','<<'+addon.getLocalizedString(30043)+'>>')
 
@@ -235,22 +237,21 @@ if mode == 'main' or mode == 'folder':
             #legacy account conversion
             try:
                 username = addon.getSetting('username')
+
                 if username != '':
-                    password  = addon.getSetting('password')
-                    auth_token = addon.getSetting('auth_token')
-                    auth_cookie = addon.getSetting('auth_cookie')
                     addon.setSetting(PLUGIN_NAME+'1_username', username)
-                    addon.setSetting(PLUGIN_NAME+'1_password', password)
-                    addon.setSetting(PLUGIN_NAME+'1_auth_token', auth_token)
-                    addon.setSetting(PLUGIN_NAME+'1_auth_cookie', auth_cookie)
-                else:
-                    xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
-                    log(addon.getLocalizedString(30015), True)
-                    xbmcplugin.endOfDirectory(plugin_handle)
+                    addon.setSetting(PLUGIN_NAME+'1_password', addon.getSetting('password'))
+                    addon.setSetting(PLUGIN_NAME+'1_auth_token', addon.getSetting('auth_token'))
+                    addon.setSetting(PLUGIN_NAME+'1_auth_cookie', addon.getSetting('auth_cookie'))
+                    addon.setSetting('username', '')
+                    addon.setSetting('password', '')
+                    addon.setSetting('auth_token', '')
+                    addon.setSetting('auth_cookie', '')
             except :
                     xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30015))
                     log(addon.getLocalizedString(30015), True)
                     xbmcplugin.endOfDirectory(plugin_handle)
+
             #let's log in
             firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
 
@@ -281,9 +282,11 @@ if mode == 'main' or mode == 'folder':
 # under development
 elif mode == 'play2':
     try:
-      url = plugin_queries['url']
+        url = plugin_queries['url']
     except:
-      url = 0
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30044)+'url')
+        log(addon.getLocalizedString(30044)+'url', True)
+        xbmcplugin.endOfDirectory(plugin_handle)
 
     try:
       instanceName = plugin_queries['instance']
@@ -293,8 +296,9 @@ elif mode == 'play2':
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
     except :
-        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
-
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30045))
+        log(addon.getLocalizedString(30045), True)
+        xbmcplugin.endOfDirectory(plugin_handle)
 
 
     episodes = []
@@ -352,9 +356,10 @@ elif mode == 'playvideo':
 
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
-
     except :
-        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30045))
+        log(addon.getLocalizedString(30045), True)
+        xbmcplugin.endOfDirectory(plugin_handle)
 
     videoURL = firedrive.getVideoLink(filename,0,False)
 
@@ -372,9 +377,11 @@ elif mode == 'streamvideo':
 
     #filename is required
     try:
-      filename = plugin_queries['filename']
+        filename = plugin_queries['filename']
     except:
-      filename = ''
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30044)+'filename')
+        log(addon.getLocalizedString(30044)+'filename', True)
+        xbmcplugin.endOfDirectory(plugin_handle)
 
     try:
       title = plugin_queries['title']
@@ -404,7 +411,9 @@ elif mode == 'streamvideo':
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
     except :
-        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30045))
+        log(addon.getLocalizedString(30045), True)
+        xbmcplugin.endOfDirectory(plugin_handle)
 
     # immediately play resulting (is a video)
     videoURL = firedrive.getVideoLink(filename, firedrive.CACHE_TYPE_STREAM, force_sd)
@@ -422,9 +431,11 @@ elif mode == 'streamvideo':
 #force stream - play a video given its exact-title
 elif mode == 'streamaudio' or mode == 'playaudio':
     try:
-      filename = plugin_queries['filename']
+        filename = plugin_queries['filename']
     except:
-      filename = ''
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30044)+'filename')
+        log(addon.getLocalizedString(30044)+'filename', True)
+        xbmcplugin.endOfDirectory(plugin_handle)
 
     try:
       title = plugin_queries['title']
@@ -440,7 +451,9 @@ elif mode == 'streamaudio' or mode == 'playaudio':
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
     except :
-        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30045))
+        log(addon.getLocalizedString(30045), True)
+        xbmcplugin.endOfDirectory(plugin_handle)
 
     # immediately play resulting (is a video)
     videoURL = firedrive.getAudioLink(filename)
@@ -455,9 +468,11 @@ elif mode == 'streamaudio' or mode == 'playaudio':
 
 elif mode == 'streamurl' or mode == 'play':
     try:
-      url = plugin_queries['url']
+        url = plugin_queries['url']
     except:
-      url = 0
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30044)+'url')
+        log(addon.getLocalizedString(30044)+'url', True)
+        xbmcplugin.endOfDirectory(plugin_handle)
 
     try:
       instanceName = plugin_queries['instance']
@@ -467,7 +482,9 @@ elif mode == 'streamurl' or mode == 'play':
     try:
         firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
     except :
-        xbmc.log(addon.getAddonInfo('name') + ': ' + 'error fetching content', xbmc.LOGERROR)
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30045))
+        log(addon.getLocalizedString(30045), True)
+        xbmcplugin.endOfDirectory(plugin_handle)
 
     # immediately play resulting (is a video)
     (title,videoURL) = firedrive.getPublicLink(url)
@@ -507,7 +524,6 @@ elif mode == 'buildstrm':
 
         if url != '':
 
-                import os
 
                 filename = xbmc.translatePath(os.path.join(path, title+'.strm'))
                 strmFile = open(filename, "w")
@@ -525,24 +541,20 @@ elif mode == 'buildstrm':
                 folderID = ''
 
 
-
             if folderID != '':
 
                     try:
                         username = addon.getSetting(instanceName+'_username')
-                        if username != '':
-
-                            firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
-
-                            savePublic = True
-                            firedrive.buildSTRM(path+'/'+title + '/',folderID,savePublic)
-
                     except:
-                        pass
+                        username = ''
+                    if username != '':
+                        firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
+
+                        savePublic = True
+                        firedrive.buildSTRM(path+'/'+title + '/',folderID,savePublic)
+
 
             else:
-
-                numberOfAccounts = numberOfAccounts(PLUGIN_NAME)
 
                 count = 1
                 max_count = int(addon.getSetting(PLUGIN_NAME+'_numaccounts'))
@@ -550,20 +562,16 @@ elif mode == 'buildstrm':
                     instanceName = PLUGIN_NAME+str(count)
                     try:
                         username = addon.getSetting(instanceName+'_username')
-                        if username != '':
+                    except:
+                        username = ''
+
+                    if username != '':
 
                             firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
 
                             savePublic = True
-                            firedrive.buildSTRM(path+username,0,savePublic)
+                            firedrive.traverse(path+username,0,0,savePublic)
 
-                            folders = firedrive.getFolderList(0)
-                            if folders:
-                                for folder in folders:
-                                    firedrive.buildSTRM(path+username+'/'+folder.title + '/',folder.id,savePublic)
-
-                    except:
-                        break
                     if count == max_count:
                         break
                     count = count + 1

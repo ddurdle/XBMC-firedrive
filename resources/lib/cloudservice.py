@@ -35,6 +35,12 @@ class cloudservice(object):
 
     def __init__(self): pass
 
+
+    ##
+    # perform login
+    ##
+    def login(self): pass
+
     ##
     # if we don't have an authorization token set for the plugin, set it with the recent login.
     #   auth_token will permit "quicker" login in future executions by reusing the existing login session (less HTTPS calls = quicker video transitions between clips)
@@ -63,4 +69,26 @@ class cloudservice(object):
             xbmc.log(self.addon.getAddonInfo('name') + ': ' + msg, xbmc.LOGERROR)
         else:
             xbmc.log(self.addon.getAddonInfo('name') + ': ' + msg, xbmc.LOGDEBUG)
+
+    def traverse(self, path, cacheType, folderID, savePublic):
+        import os
+        import xbmcvfs
+
+        xbmcvfs.mkdir(path)
+
+        folders = self.getFolderList(folderID)
+        files = self.getMediaList(folderID,cacheType)
+
+        if files:
+            for media in files:
+                filename = xbmc.translatePath(os.path.join(path, media.title+'.strm'))
+                strmFile = open(filename, "w")
+
+                strmFile.write(self.PLUGIN_URL+'?mode=streamURL&url=' + self.FILE_URL+ media.id +'\n')
+                strmFile.close()
+
+        if folders:
+            for folder in folders:
+                self.traverse( path+'/'+folder.title + '/',cacheType,folder.id,savePublic)
+
 
