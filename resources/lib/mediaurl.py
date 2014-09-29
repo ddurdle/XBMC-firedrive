@@ -20,31 +20,25 @@
 #
 #
 #
-class file:
-
-    AUDIO = 1
-    VIDEO = 2
-
+class mediaurl:
 
     ##
     ##
-    def __init__(self, id, title, plot, type, fanart,thumbnail):
-        self.id = id
-        self.title = title
-        self.plot = plot
-        self.type = type
-        self.fanart = fanart
-        self.thumbnail = thumbnail
+    def __init__(self, url, qualityDesc, quality, order):
+        self.url = url
+        self.qualityDesc = qualityDesc
+        self.quality = quality
+        self.order = order
 
 
     def __repr__(self):
         return '{}: {} {}'.format(self.__class__.__name__,
-                                  self.title)
+                                  self.order)
 
     def __cmp__(self, other):
-        if hasattr(other, 'title'):
-            return self.title.__cmp__(other.title)
+        if hasattr(other, 'order'):
+            return self.order.__cmp__(other.order)
 
     def getKey(self):
-        return self.title
+        return self.order
 

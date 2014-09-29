@@ -25,6 +25,8 @@ from resources.lib import authorization
 from cloudservice import cloudservice
 from resources.lib import folder
 from resources.lib import file
+from resources.lib import mediaurl
+
 
 
 
@@ -38,9 +40,14 @@ import xbmc, xbmcaddon, xbmcgui, xbmcplugin
 #
 class firedrive(cloudservice):
 
-    CACHE_TYPE_MEMORY = 0
-    CACHE_TYPE_DISK = 1
+    AUDIO = 1
+    VIDEO = 2
+
+    CACHE_TYPE_ORIGINAL = 0
+
     CACHE_TYPE_STREAM = 2
+    CACHE_TYPE_STREAM_SD = 3
+    CACHE_TYPE_STREAM_HD = 4
     FILE_URL = 'http://www.firedrive.com/file/'
     DOWNLOAD_LINK = 'http://dl.firedrive.com/?alias='
 
@@ -193,7 +200,7 @@ class firedrive(cloudservice):
 
         url = 'http://www.firedrive.com/action/?'+ params
 
-        videos = []
+        mediaFiles = []
         if True:
             req = urllib2.Request(url, None, self.getHeadersList())
 
@@ -227,7 +234,6 @@ class firedrive(cloudservice):
                   return
                 response_data = response.read()
 
-            # parsing page for videos
             # video-entry
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'video\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
@@ -235,7 +241,7 @@ class firedrive(cloudservice):
                 img = 'http://static.firedrive.com/'+img
 
 
-                videos.append(file.file(fileID, title, title, '', '', img))
+                mediaFiles.append(file.file(fileID, title, title, self.VIDEO, '', img))
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'audio\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
@@ -243,7 +249,7 @@ class firedrive(cloudservice):
                 img = 'http://static.firedrive.com/'+img
 
 #                videos[title] = {'url': self.PLUGIN_URL+'?mode=playAudio&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
-                videos.append(file.file(fileID, title, title, '', '', img))
+                mediaFiles.append(file.file(fileID, title, title, self.AUDIO, '', img))
 
             for r in re.finditer('"gal_thumb":"([^\"]+)"\,.*?type\=\'other\'.*?"file_filename":"([^\"]+)","al_title":"([^\"]+)".*?alias\=([^\"]+)"' ,response_data, re.DOTALL):
                 img,filename,title,fileID = r.groups()
@@ -251,19 +257,21 @@ class firedrive(cloudservice):
                 img = 'http://static.firedrive.com/'+img
 
 #                videos[title] = {'url': self.PLUGIN_URL+'?mode=playVideo&instance='+self.instanceName+'&filename=' + fileID+'&title=' + title, 'thumbnail' : img}
-                videos.append(file.file(fileID, title, title, '', '', img))
+                mediaFiles.append(file.file(fileID, title, title, self.VIDEO, '', img))
 
             response.close()
 
-        return videos
+        return mediaFiles
 
     ##
     # retrieve a playback url
     #   returns: url
     ##
     def getPlaybackCall(self, file):
-        return self.PLUGIN_URL+'?mode=play&instance='+self.instanceName+'&filename=' + file.id+'&title=' + file.title
-
+        if file.type == self.VIDEO:
+            return self.PLUGIN_URL+'?mode=play&instance='+self.instanceName+'&filename=' + file.id+'&title=' + file.title
+        else:
+            return self.PLUGIN_URL+'?mode=streamaudio&instance='+self.instanceName+'&filename=' + file.id+'&title=' + file.title
     ##
     # retrieve a directory url
     #   returns: url
@@ -331,28 +339,12 @@ class firedrive(cloudservice):
 
 
     ##
-    # retrieve a audio link
-    #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
-    #   returns: list of URLs for the video or single URL of video (if not prompting for quality)
+    # retrieve a audio playback URL
+    #   parameters: filename of audio
+    #   returns: list of media URLs
     ##
-    def getAudioLink(self,filename):
+    def getAudioURL(self,filename):
 
-        return self.DOWNLOAD_LINK+filename+'&key' + '|'+self.getHeadersEncoded()
-
-
-
-    ##
-    # retrieve a video link
-    #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
-    #   returns: list of URLs for the video or single URL of video (if not prompting for quality)
-    ##
-    def getVideoLink(self,filename,cacheType=0,videoQuality=False):
-
-        #user requested SD quality
-        if cacheType == self.CACHE_TYPE_STREAM and videoQuality == True:
-            return self.DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
-        elif cacheType != self.CACHE_TYPE_STREAM:
-            return self.DOWNLOAD_LINK+filename+ '|'+self.getHeadersEncoded()
 
 
         url = 'http://www.firedrive.com/file/'+filename
@@ -389,16 +381,92 @@ class firedrive(cloudservice):
                   return
                 response_data = response.read()
 
-        playbackURL = self.DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
+
+        mediaURLs = []
+#        playbackURL = self.DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
+        mediaURLs.append(mediaurl.mediaurl(self.DOWNLOAD_LINK+filename+'&stream', 'Transcode Stream SD', self.CACHE_TYPE_STREAM_SD, 2))
+        mediaURLs.append(mediaurl.mediaurl(self.DOWNLOAD_LINK+filename, 'Original (non-Transcode Stream)', self.CACHE_TYPE_ORIGINAL, 3))
+
         # fetch video title, download URL and docid for stream link
         for r in re.finditer('(label)\: \"([^\"]+)\"' ,response_data, re.DOTALL):
              streamLabel,streamType = r.groups()
              if streamType == 'HD':
-                 playbackURL = self.DOWNLOAD_LINK+filename+'&hd' + '|'+self.getHeadersEncoded()
+#                 playbackURL = self.DOWNLOAD_LINK+filename+'&hd' + '|'+self.getHeadersEncoded()
+                 urls.append(mediaurl.mediaurl(filename,self.DOWNLOAD_LINK+filename+'&hd', 'Transcode Stream HD', self.CACHE_TYPE_STREAM_HD, 1))
 
         response.close()
 
-        return playbackURL
+        mediaURLs = []
+        mediaURLs.append(mediaurl.mediaurl('https://dl.firedrive.com/?alias='+filename+'&key', 'Audio Stream', self.CACHE_TYPE_STREAM, 2))
+        mediaURLs.append(mediaurl.mediaurl('https://dl.firedrive.com/?alias='+filename, 'Original (non-Stream)', self.CACHE_TYPE_ORIGINAL, 3))
+
+        return mediaURLs
+
+
+    ##
+    # retrieve a video playback URL
+    #   parameters: filename of video
+    #   returns: list of media URLs
+    ##
+    def getVideoURL(self,filename):
+
+#        #user requested SD quality
+#        if cacheType == self.CACHE_TYPE_STREAM and videoQuality == True:
+#            return self.DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
+#        elif cacheType != self.CACHE_TYPE_STREAM:
+#            return self.DOWNLOAD_LINK+filename+ '|'+self.getHeadersEncoded()
+
+
+        url = 'http://www.firedrive.com/file/'+filename
+
+        req = urllib2.Request(url, None, self.getHeadersList())
+
+
+        # if action fails, validate login
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, e:
+            if e.code == 403 or e.code == 401:
+              self.login()
+              req = urllib2.Request(url, None, self.getHeadersList())
+              try:
+                response = urllib2.urlopen(req)
+              except urllib2.URLError, e:
+                xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
+                return
+            else:
+              xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
+              return
+
+        response_data = response.read()
+
+        #if authorization cookie is broken, response will be empty, so log in again
+        if response_data == '':
+                self.login()
+                req = urllib2.Request(url, None, self.getHeadersList())
+                try:
+                  response = urllib2.urlopen(req)
+                except urllib2.URLError, e:
+                  xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
+                  return
+                response_data = response.read()
+
+
+        mediaURLs = []
+#        playbackURL = self.DOWNLOAD_LINK+filename+'&stream' + '|'+self.getHeadersEncoded()
+        mediaURLs.append(mediaurl.mediaurl(self.DOWNLOAD_LINK+filename+'&stream', 'Transcode Stream SD', self.CACHE_TYPE_STREAM_SD, 2))
+        mediaURLs.append(mediaurl.mediaurl(self.DOWNLOAD_LINK+filename, 'Original (non-Transcode Stream)', self.CACHE_TYPE_ORIGINAL, 3))
+
+        # fetch video title, download URL and docid for stream link
+        for r in re.finditer('(label)\: \"([^\"]+)\"' ,response_data, re.DOTALL):
+             streamLabel,streamType = r.groups()
+             if streamType == 'HD':
+#                 playbackURL = self.DOWNLOAD_LINK+filename+'&hd' + '|'+self.getHeadersEncoded()
+                 urls.append(mediaurl.mediaurl(filename,self.DOWNLOAD_LINK+filename+'&hd', 'Transcode Stream HD', self.CACHE_TYPE_STREAM_HD, 1))
+
+        response.close()
+
+        return mediaURLs
 
 
     ##

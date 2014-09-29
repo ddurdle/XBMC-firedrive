@@ -21,7 +21,6 @@ import os
 import re
 import urllib, urllib2
 from resources.lib import authorization
-from resources.lib import account
 
 
 

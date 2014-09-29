@@ -22,6 +22,7 @@ from resources.lib import tvWindow
 from resources.lib import cloudservice
 from resources.lib import folder
 from resources.lib import file
+from resources.lib import mediaurl
 
 
 import sys
@@ -51,10 +52,17 @@ def parse_query(query):
 
 def addMediaFile(service, media):
 
-    infolabels = decode_dict({ 'title' : media.title , 'plot' : media.plot })
-    listitem = xbmcgui.ListItem(media.title, iconImage=media.thumbnail,
+    if media.type == media.AUDIO:
+        infolabels = decode_dict({ 'title' : media.title })
+        listitem = xbmcgui.ListItem(media.title, iconImage=media.thumbnail,
                                 thumbnailImage=media.thumbnail)
-    listitem.setInfo('video', infolabels)
+        listitem.setInfo('music', infolabels)
+    else:
+        infolabels = decode_dict({ 'title' : media.title , 'plot' : media.plot })
+        listitem = xbmcgui.ListItem(media.title, iconImage=media.thumbnail,
+                                thumbnailImage=media.thumbnail)
+        listitem.setInfo('video', infolabels)
+
     listitem.setProperty('IsPlayable', 'true')
     listitem.setProperty('fanart_image', media.fanart)
     cm=[]
@@ -394,10 +402,10 @@ elif mode == 'download':
         log(addon.getLocalizedString(30045), True)
         xbmcplugin.endOfDirectory(plugin_handle)
 
-    firedrive.getDownload(filename, firedrive.CACHE_TYPE_STREAM, force_sd)
+    firedrive.getDownload(filename, firedrive.CACHE_TYPE_STREAM_SD, force_sd)
 
 #force stream - play a video given its exact-title
-elif mode == 'streamvideo'  or mode == 'playvideo' or mode == 'play':
+elif mode == 'streamvideo'  or mode == 'playvideo' or mode == 'play' or mode == 'streamaudio' or mode == 'playaudio':
 
     #filename is required
     try:
@@ -441,11 +449,29 @@ elif mode == 'streamvideo'  or mode == 'playvideo' or mode == 'play':
         log(addon.getLocalizedString(30045), True)
         xbmcplugin.endOfDirectory(plugin_handle)
 
-    # immediately play resulting (is a video)
-    videoURL = firedrive.getVideoLink(filename, firedrive.CACHE_TYPE_STREAM, force_sd)
-    item = xbmcgui.ListItem(path=videoURL)
-    log('play url: ' + videoURL)
-    item.setInfo( type="Video", infoLabels={ "Title": title , "Plot" : title } )
+    if mode == 'streamaudio' or mode == 'playaudio':
+        mediaURLs = firedrive.getAudioURL(filename)
+        mediaType = 'music'
+    else:
+        mediaURLs = firedrive.getVideoURL(filename)
+        mediaType = 'video'
+
+    mediaURLs.sort(key=lambda item: item.order)
+    if len(mediaURLs) > 1:
+        options = []
+        for mediaURL in mediaURLs:
+            options.append(mediaURL.qualityDesc)
+        ret = xbmcgui.Dialog().select('Choose a stream', options)
+        item = xbmcgui.ListItem(path=mediaURLs[ret].url+'|'+firedrive.getHeadersEncoded())
+    else:
+        item = xbmcgui.ListItem(path=mediaURLs[0].url+'|'+firedrive.getHeadersEncoded())
+
+    if mode == 'streamaudio' or mode == 'playaudio':
+        item.setInfo( type=mediaType, infoLabels={ "Title": title } )
+    else:
+        item.setInfo( type=mediaType, infoLabels={ "Title": title , "Plot" : title } )
+
+
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 
@@ -481,10 +507,8 @@ elif mode == 'streamaudio' or mode == 'playaudio':
         log(addon.getLocalizedString(30045), True)
         xbmcplugin.endOfDirectory(plugin_handle)
 
-    # immediately play resulting (is a video)
     videoURL = firedrive.getAudioLink(filename)
     item = xbmcgui.ListItem(path=videoURL)
-    log('play url: ' + videoURL)
     item.setInfo( type="Video", infoLabels={ "Title": title , "Plot" : title } )
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
