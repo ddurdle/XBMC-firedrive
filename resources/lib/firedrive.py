@@ -401,6 +401,50 @@ class firedrive(cloudservice):
         return playbackURL
 
 
+    ##
+    # retrieve a media file
+    #   parameters: title of video, whether to prompt for quality/format (optional), cache type (optional)
+    ##
+    def getDownload(self,filename,cacheType=0,videoQuality=False):
+
+
+        url = self.DOWNLOAD_LINK+filename
+
+        req = urllib2.Request(url, None, self.getHeadersList())
+
+        CHUNK = 16 * 1024
+        count = 0
+        path = xbmcgui.Dialog().browse(0,self.addon.getLocalizedString(30026), 'files','',False,False,'')
+
+        # if action fails, validate login
+        try:
+            response = urllib2.urlopen(req)
+        except urllib2.URLError, e:
+            if e.code == 403 or e.code == 401:
+              self.login()
+              req = urllib2.Request(url, None, self.getHeadersList())
+              try:
+                response = urllib2.urlopen(req)
+              except urllib2.URLError, e:
+                xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
+                return
+            else:
+              xbmc.log(self.addon.getAddonInfo('name') + ': ' + str(e), xbmc.LOGERROR)
+              return
+
+        progress = xbmcgui.DialogProgress()
+        progress.create('hearder','line1','line2','line3')
+        (0,self.addon.getLocalizedString(30026), 'files','',False,False,'')
+
+        with open(path + 'test.mp4', 'wb') as fp:
+            while True:
+                progress.update(count,'line1','line2','line3')
+                chunk = response.read(CHUNK)
+                if not chunk: break
+                fp.write(chunk)
+                count = count + 1
+
+
 
     ##
     # retrieve a video link

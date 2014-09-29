@@ -65,6 +65,8 @@ def addMediaFile(service, media):
     cm.append(( addon.getLocalizedString(30046), 'XBMC.PlayMedia('+url+'&quality=SD&stream=1', ))
     cm.append(( addon.getLocalizedString(30047), 'XBMC.PlayMedia('+url+'&quality=HD&stream=1)', ))
     cm.append(( addon.getLocalizedString(30048), 'XBMC.PlayMedia('+url+'&stream=0)', ))
+    cm.append(( 'download', 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=download&title='+media.title+'&filename='+media.id+')', ))
+    cm.append(( 'download', 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=test&title='+media.title+'&filename='+media.id+')', ))
 
 #    listitem.addContextMenuItems( commands )
     if cm:
@@ -341,7 +343,58 @@ elif mode == 'play2':
 
     firedrive.updateAuthorization(addon)
 
+#test selection list
+elif mode == 'test':
 
+    ret = xbmcgui.Dialog().select('Choose a playlist', ['Playlist #1', 'Playlist #2', 'Playlist #3'])
+
+
+#download
+elif mode == 'download':
+
+
+    try:
+        filename = plugin_queries['filename']
+    except:
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30044)+'filename')
+        log(addon.getLocalizedString(30044)+'filename', True)
+        xbmcplugin.endOfDirectory(plugin_handle)
+
+    try:
+      title = plugin_queries['title']
+    except:
+      title = filename
+
+
+    try:
+        force_sd = addon.getSetting('force_sd')
+        if force_sd == 'true':
+            force_sd = True
+        else:
+            force_sd = False
+    except:
+        force_sd = False
+
+    try:
+        if (plugin_queries['quality'] == 'SD'):
+            force_sd = True
+        elif (plugin_queries['quality'] == 'HD'):
+            force_sd = False
+    except : pass
+
+    try:
+      instanceName = plugin_queries['instance']
+    except:
+      instanceName = PLUGIN_NAME+'1'
+
+    try:
+        firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
+    except :
+        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30045))
+        log(addon.getLocalizedString(30045), True)
+        xbmcplugin.endOfDirectory(plugin_handle)
+
+    firedrive.getDownload(filename, firedrive.CACHE_TYPE_STREAM, force_sd)
 
 #force stream - play a video given its exact-title
 elif mode == 'streamvideo'  or mode == 'playvideo' or mode == 'play':
