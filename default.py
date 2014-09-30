@@ -507,10 +507,10 @@ elif mode == 'buildstrm':
     try:
         path = addon.getSetting('path')
     except:
-        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), addon.getLocalizedString(30034),'',False,False,'')
+        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), 'files','',False,False,'')
 
     if path == '':
-        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), addon.getLocalizedString(30034),'',False,False,'')
+        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), 'files','',False,False,'')
 
     if path != '':
         returnPrompt = xbmcgui.Dialog().yesno(addon.getLocalizedString(30000), addon.getLocalizedString(30027) + '\n'+path +  '?')
@@ -546,15 +546,16 @@ elif mode == 'buildstrm':
 
             if folderID != '':
 
-                    try:
-                        username = addon.getSetting(instanceName+'_username')
-                    except:
-                        username = ''
-                    if username != '':
-                        firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
+                try:
+                    username = addon.getSetting(instanceName+'_username')
+                except:
+                    username = ''
 
-                        savePublic = True
-                        firedrive.buildSTRM(path+'/'+title + '/',folderID,savePublic)
+                if username != '':
+                    firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
+
+                    savePublic = True
+                    firedrive.buildSTRM(path+'/'+title + '/',folderID,savePublic)
 
 
             else:
@@ -573,7 +574,7 @@ elif mode == 'buildstrm':
                             firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
 
                             savePublic = True
-                            firedrive.traverse(path+username,0,0,savePublic)
+                            firedrive.traverse(path+username,0,0,savePublic, 1)
 
                     if count == max_count:
                         break

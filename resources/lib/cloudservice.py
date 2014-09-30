@@ -69,7 +69,8 @@ class cloudservice(object):
         else:
             xbmc.log(self.addon.getAddonInfo('name') + ': ' + msg, xbmc.LOGDEBUG)
 
-    def traverse(self, path, cacheType, folderID, savePublic):
+
+    def traverse(self, path, cacheType, folderID, savePublic, level):
         import os
         import xbmcvfs
 
@@ -86,8 +87,19 @@ class cloudservice(object):
                 strmFile.write(self.PLUGIN_URL+'?mode=streamURL&url=' + self.FILE_URL+ media.id +'\n')
                 strmFile.close()
 
-        if folders:
+        if folders and level == 1:
+            count = 1
+            progress = xbmcgui.DialogProgress()
+            progress.create(self.addon.getLocalizedString(30000),self.addon.getLocalizedString(30036),'\n','\n')
+
             for folder in folders:
-                self.traverse( path+'/'+folder.title + '/',cacheType,folder.id,savePublic)
+                max = len(folders)
+                progress.update(count/max*100,self.addon.getLocalizedString(30036),folder.title,'\n')
+                self.traverse( path+'/'+folder.title + '/',cacheType,folder.id,savePublic,0)
+                count = count + 1
+
+        if folders and level == 0:
+            for folder in folders:
+                self.traverse( path+'/'+folder.title + '/',cacheType,folder.id,savePublic,0)
 
 
