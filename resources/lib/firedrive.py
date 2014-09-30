@@ -501,12 +501,12 @@ class firedrive(cloudservice):
               return
 
         progress = xbmcgui.DialogProgress()
-        progress.create('hearder','line1','line2','line3')
-        (0,self.addon.getLocalizedString(30026), 'files','',False,False,'')
+        progress.create(addon.getLocalizedString(30000),addon.getLocalizedString(30035),filename,'\n')
+#        (0,self.addon.getLocalizedString(30026), addon.getLocalizedString(30034),'',False,False,'')
 
         with open(path + 'test.mp4', 'wb') as fp:
             while True:
-                progress.update(count,'line1','line2','line3')
+                progress.update(count,addon.getLocalizedString(30035),filename,'\n')
                 chunk = response.read(CHUNK)
                 if not chunk: break
                 fp.write(chunk)

@@ -52,16 +52,14 @@ def parse_query(query):
 
 def addMediaFile(service, media):
 
+    listitem = xbmcgui.ListItem(media.title, iconImage=media.thumbnail,
+                                thumbnailImage=media.thumbnail)
     if media.type == media.AUDIO:
         infolabels = decode_dict({ 'title' : media.title })
-        listitem = xbmcgui.ListItem(media.title, iconImage=media.thumbnail,
-                                thumbnailImage=media.thumbnail)
-        listitem.setInfo('music', infolabels)
+        listitem.setInfo('Music', infolabels)
     else:
         infolabels = decode_dict({ 'title' : media.title , 'plot' : media.plot })
-        listitem = xbmcgui.ListItem(media.title, iconImage=media.thumbnail,
-                                thumbnailImage=media.thumbnail)
-        listitem.setInfo('video', infolabels)
+        listitem.setInfo('Video', infolabels)
 
     listitem.setProperty('IsPlayable', 'true')
     listitem.setProperty('fanart_image', media.fanart)
@@ -73,8 +71,7 @@ def addMediaFile(service, media):
     cm.append(( addon.getLocalizedString(30046), 'XBMC.PlayMedia('+url+'&quality=SD&stream=1', ))
     cm.append(( addon.getLocalizedString(30047), 'XBMC.PlayMedia('+url+'&quality=HD&stream=1)', ))
     cm.append(( addon.getLocalizedString(30048), 'XBMC.PlayMedia('+url+'&stream=0)', ))
-    cm.append(( 'download', 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=download&title='+media.title+'&filename='+media.id+')', ))
-    cm.append(( 'download', 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=test&title='+media.title+'&filename='+media.id+')', ))
+    cm.append(( addon.getLocalizedString(30032), 'XBMC.RunPlugin('+PLUGIN_URL+'?mode=download&title='+media.title+'&filename='+media.id+')', ))
 
 #    listitem.addContextMenuItems( commands )
     if cm:
@@ -351,12 +348,6 @@ elif mode == 'play2':
 
     firedrive.updateAuthorization(addon)
 
-#test selection list
-elif mode == 'test':
-
-    ret = xbmcgui.Dialog().select('Choose a playlist', ['Playlist #1', 'Playlist #2', 'Playlist #3'])
-
-
 #download
 elif mode == 'download':
 
@@ -451,17 +442,17 @@ elif mode == 'streamvideo'  or mode == 'playvideo' or mode == 'play' or mode == 
 
     if mode == 'streamaudio' or mode == 'playaudio':
         mediaURLs = firedrive.getAudioURL(filename)
-        mediaType = 'music'
+        mediaType = 'Video' #even audio seems to require Video
     else:
         mediaURLs = firedrive.getVideoURL(filename)
-        mediaType = 'video'
+        mediaType = 'Video'
 
     mediaURLs.sort(key=lambda item: item.order)
     if len(mediaURLs) > 1:
         options = []
         for mediaURL in mediaURLs:
             options.append(mediaURL.qualityDesc)
-        ret = xbmcgui.Dialog().select('Choose a stream', options)
+        ret = xbmcgui.Dialog().select(addon.getLocalizedString(30033), options)
         item = xbmcgui.ListItem(path=mediaURLs[ret].url+'|'+firedrive.getHeadersEncoded())
     else:
         item = xbmcgui.ListItem(path=mediaURLs[0].url+'|'+firedrive.getHeadersEncoded())
@@ -472,44 +463,6 @@ elif mode == 'streamvideo'  or mode == 'playvideo' or mode == 'play' or mode == 
         item.setInfo( type=mediaType, infoLabels={ "Title": title , "Plot" : title } )
 
 
-    xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
-
-
-    firedrive.updateAuthorization(addon)
-
-
-
-
-#force stream - play a video given its exact-title
-elif mode == 'streamaudio' or mode == 'playaudio':
-    try:
-        filename = plugin_queries['filename']
-    except:
-        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30044)+'filename')
-        log(addon.getLocalizedString(30044)+'filename', True)
-        xbmcplugin.endOfDirectory(plugin_handle)
-
-    try:
-      title = plugin_queries['title']
-    except:
-      title = filename
-
-
-    try:
-      instanceName = plugin_queries['instance']
-    except:
-      instanceName = PLUGIN_NAME+'1'
-
-    try:
-        firedrive = firedrive.firedrive(PLUGIN_URL,addon,instanceName, user_agent)
-    except :
-        xbmcgui.Dialog().ok(addon.getLocalizedString(30000), addon.getLocalizedString(30045))
-        log(addon.getLocalizedString(30045), True)
-        xbmcplugin.endOfDirectory(plugin_handle)
-
-    videoURL = firedrive.getAudioLink(filename)
-    item = xbmcgui.ListItem(path=videoURL)
-    item.setInfo( type="Video", infoLabels={ "Title": title , "Plot" : title } )
     xbmcplugin.setResolvedUrl(int(sys.argv[1]), True, item)
 
 
@@ -554,10 +507,10 @@ elif mode == 'buildstrm':
     try:
         path = addon.getSetting('path')
     except:
-        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), 'files','',False,False,'')
+        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), addon.getLocalizedString(30034),'',False,False,'')
 
     if path == '':
-        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), 'files','',False,False,'')
+        path = xbmcgui.Dialog().browse(0,addon.getLocalizedString(30026), addon.getLocalizedString(30034),'',False,False,'')
 
     if path != '':
         returnPrompt = xbmcgui.Dialog().yesno(addon.getLocalizedString(30000), addon.getLocalizedString(30027) + '\n'+path +  '?')
