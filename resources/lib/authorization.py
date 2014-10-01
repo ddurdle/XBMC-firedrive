@@ -34,8 +34,13 @@ class authorization:
     # Set the token of name with value provided.
     ##
     def setToken(self,name,value):
-        if not self.auth and name in self.auth:
+        try:
+            if self.auth[name] != value:
+                self.auth[name] = value
             self.isUpdated = True
+        except: pass
+#        if name in self.auth:
+#            self.isUpdated = True
         self.auth[name] = value
 
 
